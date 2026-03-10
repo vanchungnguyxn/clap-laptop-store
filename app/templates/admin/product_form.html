@@ -1,0 +1,493 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "Thêm sản phẩm" if mode == "add" else "Sửa sản phẩm" }}{% endblock %}
+
+{% macro field(name, label, value='', type='text', placeholder='', required=false, half=false) %}
+<div class="{{ 'col-md-6' if half else 'col-12' }} mb-3">
+    <label class="form-label fw-semibold small text-muted text-uppercase">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+    <input type="{{ type }}" class="form-control" name="{{ name }}"
+           value="{{ value }}" placeholder="{{ placeholder }}" {{ 'required' if required }}>
+</div>
+{% endmacro %}
+
+{% set p = product or {} %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>
+        <i class="bi bi-{{ 'plus-circle' if mode == 'add' else 'pencil' }} me-2"></i>
+        {{ "Thêm sản phẩm mới" if mode == "add" else "Sửa sản phẩm" }}
+    </h4>
+    <a href="{{ url_for('admin.product_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+
+<form method="POST" id="productForm" enctype="multipart/form-data">
+<input type="hidden" name="ai_competitors_json" id="aiCompetitorsJson" value="">
+<div class="row">
+    <!-- ═══════ CỘT TRÁI: THÔNG TIN CHÍNH ═══════ -->
+    <div class="col-lg-8">
+
+        <!-- Card: Thông tin cơ bản -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin cơ bản</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {{ field('name', 'Tên sản phẩm', p.get('name','') if p else '', required=true, placeholder='VD: Laptop Dell Inspiron 15') }}
+                </div>
+                <div class="row">
+                    {{ field('brand', 'Thương hiệu', p.get('brand','') if p else '', half=true, placeholder='VD: Dell') }}
+                    {{ field('model', 'Model', p.get('model','') if p else '', half=true, placeholder='VD: Inspiron 15 3520') }}
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Danh mục</label>
+                        <select name="category" class="form-select">
+                            <option value="">-- Chọn --</option>
+                            {% set cat = p.get('category','') if p else '' %}
+                            <option value="Laptop phổ thông" {{ 'selected' if cat == 'Laptop phổ thông' }}>Laptop phổ thông</option>
+                            <option value="Laptop cao cấp" {{ 'selected' if cat == 'Laptop cao cấp' }}>Laptop cao cấp</option>
+                            <option value="Laptop gaming" {{ 'selected' if cat == 'Laptop gaming' }}>Laptop gaming</option>
+                            <option value="Laptop doanh nhân" {{ 'selected' if cat == 'Laptop doanh nhân' }}>Laptop doanh nhân</option>
+                        </select>
+                    </div>
+                    {{ field('color', 'Màu sắc', p.get('color','') if p else '', half=true, placeholder='VD: Bạc, Đen, Xám') }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Mô tả sản phẩm</label>
+                    <textarea class="form-control" name="description" rows="3"
+                              placeholder="Giới thiệu ngắn gọn về sản phẩm...">{{ p.get('description','') if p else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Cấu hình chi tiết (bảng "Điểm nổi bật") -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-cpu me-2 text-danger"></i>Cấu hình chi tiết</h6>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="btnAiSpecs"
+                        onclick="aiAutoFillSpecs()">
+                    <i class="bi bi-stars me-1"></i>AI tự điền
+                </button>
+            </div>
+            <div id="aiSpecStatus" class="mx-3 mt-2" style="display:none;"></div>
+            <div class="card-body">
+                <div class="row">
+                    {{ field('cpu', 'CPU', p.get('cpu','') if p else '', half=true, placeholder='VD: Intel Core i5-13420H') }}
+                    {{ field('gpu', 'Card đồ họa', p.get('gpu','') if p else '', half=true, placeholder='VD: NVIDIA RTX 4050 6GB') }}
+                </div>
+                <div class="row">
+                    {{ field('ram', 'RAM', p.get('ram','') if p else '', half=true, placeholder='VD: 16GB DDR5 4800MHz') }}
+                    {{ field('storage', 'Ổ cứng (SSD/HDD)', p.get('storage','') if p else '', half=true, placeholder='VD: 512GB NVMe SSD') }}
+                </div>
+                <div class="row">
+                    {{ field('screen_size', 'Kích thước màn hình', p.get('screen_size','') if p else '', half=true, placeholder='VD: 16 inch') }}
+                    {{ field('screen_detail', 'Chi tiết màn hình', p.get('screen_detail','') if p else '', half=true, placeholder='VD: FHD+ IPS 165Hz') }}
+                </div>
+                <div class="row">
+                    {{ field('battery', 'Pin', p.get('battery','') if p else '', half=true, placeholder='VD: 54Wh, sạc nhanh 90W') }}
+                    {{ field('weight', 'Trọng lượng', p.get('weight','') if p else '', half=true, placeholder='VD: 2.3 kg') }}
+                </div>
+                <div class="row">
+                    {{ field('os', 'Hệ điều hành', p.get('os','') if p else '', half=true, placeholder='VD: Windows 11 Home') }}
+                    {{ field('warranty', 'Bảo hành', p.get('warranty','') if p else '', half=true, placeholder='VD: 24 tháng chính hãng') }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Cổng kết nối</label>
+                    <input type="text" class="form-control" name="ports"
+                           value="{{ p.get('ports','') if p else '' }}"
+                           placeholder="VD: 1x USB-C, 2x USB-A, HDMI 2.1, Jack 3.5mm">
+                </div>
+                <div class="mb-0">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Ghi chú cấu hình (cũ)</label>
+                    <textarea class="form-control" name="specs" rows="2"
+                              placeholder="Ghi chú thêm nếu cần...">{{ p.get('specs','') if p else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: Giá & Tồn kho -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-currency-dollar me-2 text-success"></i>Giá &amp; Tồn kho</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Giá vốn (₫)</label>
+                        <input type="number" class="form-control" name="cost_price" id="costPrice"
+                               value="{{ p.get('cost_price','') if p else '' }}"
+                               placeholder="13000000" min="0" step="1000">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Giá bán (₫) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="current_price" id="currentPrice"
+                               value="{{ p.get('current_price','') if p else '' }}"
+                               placeholder="15990000" min="0" step="1000" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Số lượng nhập</label>
+                        <input type="number" class="form-control" name="stock_quantity"
+                               value="{{ p.get('stock_quantity', 0) if p else 0 }}" min="0">
+                    </div>
+                </div>
+
+                <!-- Nút AI gợi ý giá -->
+                <div class="p-3 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-robot text-primary fs-5 me-2"></i>
+                            <strong>AI gợi ý giá</strong>
+                            <br><small class="text-muted">So sánh giá các sàn TMĐT và đề xuất giá tối ưu</small>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" id="btnAiSuggest"
+                                onclick="event.preventDefault(); event.stopPropagation(); aiSuggestPrice();"
+                                formnovalidate>
+                            <i class="bi bi-magic me-1"></i>Gợi ý giá AI
+                        </button>
+                    </div>
+                    <div id="aiResult" class="mt-3" style="display:none;">
+                        <div class="alert alert-info mb-2" id="aiReason"></div>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">Giá thấp nhất</small>
+                                <div class="fw-bold text-success" id="aiMinPrice">–</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Giá trung bình</small>
+                                <div class="fw-bold text-primary" id="aiAvgPrice">–</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Giá cao nhất</small>
+                                <div class="fw-bold text-danger" id="aiMaxPrice">–</div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <span class="text-muted">Giá gợi ý:</span>
+                            <span class="fs-4 fw-bold text-primary" id="aiSuggestedPrice">–</span>
+                            <button type="button" class="btn btn-sm btn-success ms-2" onclick="applySuggestedPrice()">
+                                <i class="bi bi-check"></i> Áp dụng
+                            </button>
+                        </div>
+                        <div id="aiCompetitors" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nút submit -->
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-check-circle me-1"></i>
+                {{ "Thêm sản phẩm" if mode == "add" else "Lưu thay đổi" }}
+            </button>
+            <a href="{{ url_for('admin.product_list') }}" class="btn btn-outline-secondary btn-lg">Hủy</a>
+        </div>
+    </div>
+
+    <!-- ═══════ CỘT PHẢI: ẢNH + ĐỐI THỦ + HƯỚNG DẪN ═══════ -->
+    <div class="col-lg-4">
+
+        <!-- Card: Ảnh sản phẩm -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-image me-2 text-info"></i>Ảnh sản phẩm</h6>
+            </div>
+            <div class="card-body text-center">
+                {% set img = p.get('image_url','') if p else '' %}
+                <div id="imagePreview" class="mb-3 rounded overflow-hidden bg-light d-flex align-items-center justify-content-center"
+                     style="height:220px; border: 2px dashed #dee2e6; cursor:pointer;"
+                     onclick="document.getElementById('imageInput').click()">
+                    {% if img %}
+                    <img src="{{ img }}" alt="Product" style="max-height:100%; max-width:100%; object-fit:contain;" id="previewImg">
+                    {% else %}
+                    <div class="text-muted" id="previewPlaceholder">
+                        <i class="bi bi-cloud-arrow-up fs-1 d-block"></i>
+                        <small>Bấm để chọn ảnh</small>
+                    </div>
+                    <img src="" alt="" style="max-height:100%; max-width:100%; object-fit:contain; display:none;" id="previewImg">
+                    {% endif %}
+                </div>
+                <input type="file" class="d-none" id="imageInput" name="image" accept="image/*"
+                       onchange="previewImage(this)">
+                <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                        onclick="document.getElementById('imageInput').click()">
+                    <i class="bi bi-upload me-1"></i>Chọn ảnh
+                </button>
+            </div>
+        </div>
+
+        <!-- Card: Xem trước "Điểm nổi bật" -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-eye me-2 text-warning"></i>Xem trước thông số</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" id="specPreviewTable">
+                    <thead>
+                        <tr class="table-danger">
+                            <th colspan="2" class="text-white small text-uppercase"
+                                style="background:linear-gradient(135deg,#dc3545,#c82333);">
+                                Điểm nổi bật
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="fw-semibold" style="width:40%">CPU</td><td id="pvCpu">–</td></tr>
+                        <tr><td class="fw-semibold">Card đồ họa</td><td id="pvGpu">–</td></tr>
+                        <tr><td class="fw-semibold">RAM</td><td id="pvRam">–</td></tr>
+                        <tr><td class="fw-semibold">SSD</td><td id="pvStorage">–</td></tr>
+                        <tr><td class="fw-semibold">Màn hình</td><td id="pvScreen">–</td></tr>
+                        <tr><td class="fw-semibold">Pin</td><td id="pvBattery">–</td></tr>
+                        <tr><td class="fw-semibold">Trọng lượng</td><td id="pvWeight">–</td></tr>
+                        <tr><td class="fw-semibold">Hệ điều hành</td><td id="pvOs">–</td></tr>
+                        <tr><td class="fw-semibold">Bảo hành</td><td id="pvWarranty">–</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if mode == "edit" and competitor_prices %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-shop me-2"></i>Giá đối thủ hiện tại</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr><th>Sàn TMĐT</th><th>Giá</th><th>Tình trạng</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for cp in competitor_prices %}
+                        <tr>
+                            <td><i class="bi bi-shop me-1"></i>{{ cp.competitor_name }}</td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(cp.price) }}₫</td>
+                            <td>
+                                {% if cp.is_in_stock %}<span class="badge bg-success">Còn hàng</span>
+                                {% else %}<span class="badge bg-danger">Hết hàng</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Hướng dẫn -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Hướng dẫn</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 p-2 bg-light rounded">
+                    <small>
+                        <strong>1.</strong> Nhập thông tin cơ bản + cấu hình chi tiết.<br>
+                        <strong>2.</strong> Upload ảnh sản phẩm.<br>
+                        <strong>3.</strong> Nhấn <strong>"Gợi ý giá AI"</strong> để so sánh giá thị trường.<br>
+                        <strong>4.</strong> Nhấn <strong>"Thêm sản phẩm"</strong> để đăng bán.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let suggestedPriceValue = 0;
+let lastAiCompetitors = [];
+const PRODUCT_MODE = '{{ mode }}';
+const PRODUCT_ID = {{ product.get('id', 0) if product else 0 }};
+
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById('previewImg');
+            img.src = e.target.result;
+            img.style.display = 'block';
+            const ph = document.getElementById('previewPlaceholder');
+            if (ph) ph.style.display = 'none';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Live preview spec table
+const specMap = {
+    cpu: 'pvCpu', gpu: 'pvGpu', ram: 'pvRam', storage: 'pvStorage',
+    screen_size: 'pvScreen', battery: 'pvBattery', weight: 'pvWeight',
+    os: 'pvOs', warranty: 'pvWarranty'
+};
+Object.keys(specMap).forEach(function(name) {
+    const el = document.querySelector('[name="' + name + '"]');
+    if (el) {
+        const update = function() {
+            let val = el.value.trim();
+            if (name === 'screen_size') {
+                const detail = document.querySelector('[name="screen_detail"]');
+                if (detail && detail.value.trim()) val += ' – ' + detail.value.trim();
+            }
+            document.getElementById(specMap[name]).textContent = val || '–';
+        };
+        el.addEventListener('input', update);
+        update();
+    }
+});
+(function() {
+    const sd = document.querySelector('[name="screen_detail"]');
+    if (sd) sd.addEventListener('input', function() {
+        const sz = document.querySelector('[name="screen_size"]');
+        let val = (sz ? sz.value.trim() : '');
+        if (this.value.trim()) val += ' – ' + this.value.trim();
+        document.getElementById('pvScreen').textContent = val || '–';
+    });
+})();
+
+async function aiSuggestPrice() {
+    const name = document.querySelector('[name="name"]').value.trim();
+    const brand = document.querySelector('[name="brand"]').value.trim();
+    const costPrice = parseFloat(document.getElementById('costPrice').value) || 0;
+    const btn = document.getElementById('btnAiSuggest');
+
+    if (!name) { alert('Vui lòng nhập tên sản phẩm trước.'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang phân tích...';
+
+    try {
+        const res = await fetch(window.location.origin + '/admin/api/ai-suggest-price', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_name: name, brand, cost_price: costPrice, product_id: PRODUCT_ID || null }),
+        });
+        if (!res.ok) { alert('Server trả lỗi ' + res.status); return; }
+        const data = await res.json();
+
+        if (data.success) {
+            document.getElementById('aiResult').style.display = 'block';
+            document.getElementById('aiReason').textContent = data.reason;
+
+            const fmt = v => v ? new Intl.NumberFormat('vi-VN').format(v) + '₫' : '–';
+            document.getElementById('aiMinPrice').textContent = fmt(data.market_data.min_price);
+            document.getElementById('aiAvgPrice').textContent = fmt(data.market_data.avg_price);
+            document.getElementById('aiMaxPrice').textContent = fmt(data.market_data.max_price);
+            document.getElementById('aiSuggestedPrice').textContent = fmt(data.suggested_price);
+            suggestedPriceValue = data.suggested_price;
+            lastAiCompetitors = data.competitors || [];
+
+            if (data.competitors && data.competitors.length > 0) {
+                let html = '<h6 class="mb-2"><i class="bi bi-globe me-1"></i>Giá từ ' + data.competitors.length + ' trang web</h6>';
+                data.competitors.forEach(function(c) {
+                    const url = c.url || '#';
+                    html += '<a href="' + url + '" target="_blank" rel="noopener" class="d-flex align-items-center p-2 mb-2 bg-white border rounded shadow-sm text-decoration-none" style="gap:10px; transition:background .15s;" onmouseover="this.style.background=\'#f0f9ff\'" onmouseout="this.style.background=\'#fff\'">';
+                    html += '<img src="' + (c.favicon_url||'') + '" width="28" height="28" style="border-radius:6px;flex-shrink:0;background:#f3f4f6;padding:2px;" onerror="this.src=\'https://www.google.com/s2/favicons?domain=google.com&sz=32\'">';
+                    html += '<div class="flex-grow-1 overflow-hidden">';
+                    html += '<div class="fw-bold text-primary" style="font-size:.85rem;">' + (c.site_name||c.domain) + ' <i class="bi bi-box-arrow-up-right" style="font-size:.7rem;opacity:.5;"></i></div>';
+                    html += '<div class="text-muted" style="font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (c.product_title||'').substring(0,55) + '</div>';
+                    html += '</div>';
+                    html += '<span class="fw-bold text-danger" style="flex-shrink:0;font-size:.9rem;">' + fmt(c.price) + '</span>';
+                    html += '</a>';
+                });
+                document.getElementById('aiCompetitors').innerHTML = html;
+            } else {
+                document.getElementById('aiCompetitors').innerHTML = '<div class="text-center text-muted py-2"><i class="bi bi-search"></i> Không tìm thấy giá</div>';
+            }
+        } else {
+            alert('Lỗi: ' + (data.error || 'Không rõ'));
+        }
+    } catch(e) {
+        alert('Lỗi kết nối: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-magic me-1"></i>Gợi ý giá AI';
+    }
+}
+
+document.getElementById('productForm').addEventListener('submit', function() {
+    if (lastAiCompetitors.length > 0) {
+        document.getElementById('aiCompetitorsJson').value = JSON.stringify(lastAiCompetitors);
+    }
+});
+
+function applySuggestedPrice() {
+    if (suggestedPriceValue > 0) {
+        document.getElementById('currentPrice').value = suggestedPriceValue;
+        document.getElementById('currentPrice').classList.add('border-success');
+        setTimeout(function() { document.getElementById('currentPrice').classList.remove('border-success'); }, 2000);
+    }
+}
+
+async function aiAutoFillSpecs() {
+    const nameEl = document.querySelector('[name="name"]');
+    const brandEl = document.querySelector('[name="brand"]');
+    const name = (nameEl ? nameEl.value.trim() : '');
+    const brand = (brandEl ? brandEl.value.trim() : '');
+    const query = (name + ' ' + brand).trim();
+
+    if (!query) { alert('Vui lòng nhập tên sản phẩm trước.'); return; }
+
+    const btn = document.getElementById('btnAiSpecs');
+    const statusDiv = document.getElementById('aiSpecStatus');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tra cứu...';
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="bi bi-hourglass-split me-1"></i>AI đang tìm thông số kỹ thuật từ các website uy tín... (có thể mất 15-30 giây)</div>';
+
+    try {
+        const res = await fetch(window.location.origin + '/admin/api/ai-autofill-specs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_name: query }),
+        });
+        if (!res.ok) { throw new Error('Server trả lỗi ' + res.status); }
+        const data = await res.json();
+
+        if (data.success && data.specs) {
+            const specs = data.specs;
+            let filled = 0;
+            const fields = ['cpu','gpu','ram','storage','screen_size','screen_detail',
+                            'battery','weight','os','ports','warranty','color'];
+
+            fields.forEach(function(f) {
+                if (specs[f]) {
+                    const el = document.querySelector('[name="' + f + '"]');
+                    if (el) {
+                        const old = el.value.trim();
+                        if (!old) {
+                            el.value = specs[f];
+                            el.classList.add('border-success');
+                            el.style.transition = 'border-color .5s';
+                            setTimeout(function() { el.classList.remove('border-success'); }, 3000);
+                            filled++;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    }
+                }
+            });
+
+            const src = data.source || 'web';
+            statusDiv.innerHTML = '<div class="alert alert-success py-2 mb-0 small">' +
+                '<i class="bi bi-check-circle me-1"></i>Đã điền <strong>' + filled + '</strong> thông số từ <strong>' + src + '</strong>' +
+                (data.source_url ? ' <a href="' + data.source_url + '" target="_blank" class="ms-1"><i class="bi bi-box-arrow-up-right"></i></a>' : '') +
+                '</div>';
+            setTimeout(function() { statusDiv.style.display = 'none'; }, 8000);
+        } else {
+            statusDiv.innerHTML = '<div class="alert alert-warning py-2 mb-0 small"><i class="bi bi-exclamation-triangle me-1"></i>Không tìm thấy thông số. Hãy kiểm tra tên sản phẩm hoặc nhập thủ công.</div>';
+            setTimeout(function() { statusDiv.style.display = 'none'; }, 5000);
+        }
+    } catch(e) {
+        statusDiv.innerHTML = '<div class="alert alert-danger py-2 mb-0 small"><i class="bi bi-x-circle me-1"></i>Lỗi: ' + e.message + '</div>';
+        setTimeout(function() { statusDiv.style.display = 'none'; }, 5000);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-stars me-1"></i>AI tự điền';
+    }
+}
+</script>
+{% endblock %}

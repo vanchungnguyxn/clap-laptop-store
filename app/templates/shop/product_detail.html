@@ -1,0 +1,406 @@
+{% extends "shop/base.html" %}
+{% block title %}{{ product.name }} – cLap{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pd-img-box {
+        background: #fff; border-radius: 12px; border: 1px solid #e5e7eb;
+        padding: 2rem; text-align: center; position: relative;
+    }
+    .pd-img-box img { max-height: 320px; max-width: 100%; object-fit: contain; }
+    .pd-img-box .pd-badge {
+        position: absolute; top: 12px; left: 12px; font-size: .7rem;
+        padding: 4px 12px; border-radius: 6px; color: #fff; font-weight: 700;
+    }
+
+    .pd-price-box {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem;
+    }
+    .pd-price-main { font-size: 2rem; font-weight: 900; color: var(--cl-red); }
+    .pd-price-old { font-size: 1rem; text-decoration: line-through; color: #94a3b8; margin-left: 8px; }
+    .pd-discount-badge {
+        background: var(--cl-red); color: #fff; font-size: .75rem; font-weight: 700;
+        padding: 3px 10px; border-radius: 4px; margin-left: 8px;
+    }
+    .pd-buy-actions .btn { border-radius: 8px; font-weight: 700; }
+
+    .spec-table { border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; }
+    .spec-table .spec-header {
+        background: linear-gradient(135deg, #d70018, #ff4757); color: #fff;
+        padding: .6rem 1rem; font-weight: 700; font-size: .85rem;
+    }
+    .spec-table table { margin: 0; }
+    .spec-table table td { padding: .55rem .85rem; font-size: .85rem; vertical-align: middle; border-color: #f1f5f9; }
+    .spec-table table tr:nth-child(even) { background: #fafbfc; }
+    .spec-table .spec-label { font-weight: 600; color: #475569; width: 38%; white-space: nowrap; }
+
+    .compare-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .compare-header {
+        background: linear-gradient(135deg, var(--cl-dark), var(--cl-dark2));
+        color: #fff; padding: 1rem 1.25rem;
+    }
+    .compare-header h6 { margin: 0; font-weight: 700; }
+
+    .comp-card {
+        display: flex; align-items: center; gap: 12px; padding: .85rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9; transition: background .15s;
+    }
+    .comp-card:last-child { border-bottom: none; }
+    .comp-card:hover { background: #f8fafc; }
+    .comp-card.is-ours { background: #eff6ff; border-left: 3px solid var(--cl-blue); }
+    .comp-favicon {
+        width: 32px; height: 32px; border-radius: 6px; object-fit: contain;
+        background: #f3f4f6; padding: 2px; flex-shrink: 0;
+    }
+    .comp-name { font-weight: 600; font-size: .85rem; }
+    .comp-subtitle { font-size: .72rem; color: #64748b; }
+    .comp-price { font-weight: 800; font-size: 1rem; white-space: nowrap; }
+    .comp-diff { font-size: .72rem; font-weight: 600; }
+
+    .stat-card {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+        padding: 1rem; text-align: center;
+    }
+    .stat-card .stat-label { font-size: .72rem; color: #64748b; font-weight: 500; }
+    .stat-card .stat-value { font-size: 1.1rem; font-weight: 800; }
+
+    .info-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .info-card .info-header { padding: .75rem 1rem; font-weight: 700; font-size: .9rem; border-bottom: 1px solid #f1f5f9; }
+    .info-card .info-body { padding: 1rem; }
+
+    .promo-tag {
+        display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px;
+        border: 1px solid #e5e7eb; border-radius: 8px; font-size: .78rem;
+        color: #475569; background: #fff;
+    }
+    .promo-tag i { color: var(--cl-red); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size:.85rem;">
+            <li class="breadcrumb-item"><a href="{{ url_for('shop.index') }}" class="text-decoration-none">Trang chủ</a></li>
+            {% if product.category %}
+            <li class="breadcrumb-item"><a href="{{ url_for('shop.index', category=product.category) }}" class="text-decoration-none">{{ product.category }}</a></li>
+            {% endif %}
+            {% if product.brand %}
+            <li class="breadcrumb-item"><a href="{{ url_for('shop.index', brand=product.brand) }}" class="text-decoration-none">{{ product.brand }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active text-truncate" style="max-width:300px;">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- ══════════ CỘT TRÁI: ẢNH + SPECS ══════════ -->
+        <div class="col-lg-5">
+
+            <!-- Ảnh sản phẩm -->
+            <div class="pd-img-box mb-3">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                {% else %}
+                <i class="bi bi-laptop" style="font-size:6rem; color:#cbd5e1;"></i>
+                {% endif %}
+
+                {% if analysis.is_cheapest and competitor_prices %}
+                <span class="pd-badge" style="background: var(--cl-gradient-green);"><i class="bi bi-check-circle me-1"></i>Giá tốt nhất</span>
+                {% endif %}
+            </div>
+
+            <!-- Promo tags -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="promo-tag"><i class="bi bi-shield-check"></i> Chính hãng 100%</span>
+                <span class="promo-tag"><i class="bi bi-arrow-repeat"></i> 1 đổi 1 trong 30 ngày</span>
+                <span class="promo-tag"><i class="bi bi-truck"></i> Giao hàng miễn phí</span>
+                <span class="promo-tag"><i class="bi bi-credit-card"></i> Trả góp 0%</span>
+            </div>
+
+            <!-- Bảng thông số -->
+            {% set specs = [
+                ('CPU', product.cpu, 'bi-cpu'),
+                ('Card đồ họa', product.gpu, 'bi-gpu-card'),
+                ('RAM', product.ram, 'bi-memory'),
+                ('Ổ cứng', product.storage, 'bi-device-ssd'),
+                ('Màn hình', (product.screen_size or '') ~ (' – ' ~ product.screen_detail if product.screen_detail else ''), 'bi-display'),
+                ('Pin', product.battery, 'bi-battery-charging'),
+                ('Trọng lượng', product.weight, 'bi-box'),
+                ('Hệ điều hành', product.os, 'bi-windows'),
+                ('Cổng kết nối', product.ports, 'bi-usb-plug'),
+                ('Màu sắc', product.color, 'bi-palette'),
+                ('Bảo hành', product.warranty, 'bi-patch-check'),
+            ] %}
+            {% set has_specs = specs|selectattr(1)|list|length > 0 %}
+            {% if has_specs %}
+            <div class="spec-table">
+                <div class="spec-header"><i class="bi bi-stars me-2"></i>Thông số kỹ thuật</div>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    {% for label, val, icon in specs %}
+                        {% if val %}
+                        <tr>
+                            <td class="spec-label"><i class="bi {{ icon }} me-2 text-muted"></i>{{ label }}</td>
+                            <td>{{ val }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ══════════ CỘT PHẢI: GIÁ + SO SÁNH ══════════ -->
+        <div class="col-lg-7">
+
+            <!-- Tên & badges -->
+            <div class="mb-2 d-flex flex-wrap gap-2">
+                {% if product.brand %}
+                <span class="badge text-dark border fw-semibold" style="background:#f1f5f9;">{{ product.brand }}</span>
+                {% endif %}
+                {% if product.category %}
+                <span class="badge text-dark border fw-semibold" style="background:#f1f5f9;">{{ product.category }}</span>
+                {% endif %}
+                {% if product.stock_quantity > 0 %}
+                <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Còn hàng</span>
+                {% else %}
+                <span class="badge bg-danger">Hết hàng</span>
+                {% endif %}
+            </div>
+            <h4 class="fw-bold mb-1">{{ product.name }}</h4>
+            {% if product.model %}<p class="text-muted small mb-2">Model: {{ product.model }}</p>{% endif %}
+            {% if product.description %}<p class="mb-3" style="font-size:.9rem; color:#475569;">{{ product.description }}</p>{% endif %}
+
+            <!-- ── GIÁ ── -->
+            <div class="pd-price-box mb-3">
+                <div class="d-flex align-items-center flex-wrap gap-1 mb-2">
+                    <span class="pd-price-main">{{ "{:,.0f}".format(product.current_price) }}₫</span>
+                    {% if analysis.max_competitor and analysis.max_competitor > product.current_price|float %}
+                    <span class="pd-price-old">{{ "{:,.0f}".format(analysis.max_competitor) }}₫</span>
+                    {% set pct = ((analysis.max_competitor - product.current_price|float) / analysis.max_competitor * 100)|int %}
+                    {% if pct > 0 %}
+                    <span class="pd-discount-badge">-{{ pct }}%</span>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                {% if analysis.savings and analysis.savings > 0 %}
+                <div class="mb-2" style="font-size:.85rem;">
+                    <span class="text-success fw-semibold">
+                        <i class="bi bi-piggy-bank me-1"></i>Tiết kiệm đến <strong>{{ "{:,.0f}".format(analysis.savings) }}₫</strong> so với sàn khác
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if analysis.is_cheapest and competitor_prices %}
+                <div class="mb-3 p-2 rounded" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0;">
+                    <span class="fw-bold text-success" style="font-size:.85rem;">
+                        <i class="bi bi-trophy me-1"></i>Giá tốt nhất thị trường – Rẻ hơn tất cả sàn TMĐT
+                    </span>
+                </div>
+                {% endif %}
+
+                <!-- Nút mua hàng -->
+                <div class="pd-buy-actions d-flex gap-2 flex-wrap">
+                    <button class="btn btn-danger btn-lg flex-grow-1" style="background: var(--cl-gradient-red); border:none;">
+                        <i class="bi bi-cart-plus me-1"></i>MUA NGAY
+                    </button>
+                    <button class="btn btn-outline-danger btn-lg">
+                        <i class="bi bi-credit-card me-1"></i>Trả góp 0%
+                    </button>
+                    <button class="btn btn-outline-secondary btn-lg">
+                        <i class="bi bi-heart"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── THỐNG KÊ GIÁ ── -->
+            {% if analysis.avg_competitor %}
+            <div class="row g-2 mb-3">
+                <div class="col-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Giá CLap</div>
+                        <div class="stat-value" style="color: var(--cl-red);">{{ "{:,.0f}".format(product.current_price) }}₫</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Thấp nhất</div>
+                        <div class="stat-value text-success">{{ "{:,.0f}".format(analysis.min_competitor) }}₫</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Trung bình</div>
+                        <div class="stat-value text-primary">{{ "{:,.0f}".format(analysis.avg_competitor) }}₫</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Cao nhất</div>
+                        <div class="stat-value text-danger">{{ "{:,.0f}".format(analysis.max_competitor) }}₫</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ══════════ SO SÁNH GIÁ ══════════ -->
+            <div class="compare-section mb-3">
+                <div class="compare-header d-flex justify-content-between align-items-center">
+                    <h6><i class="bi bi-bar-chart-line me-2"></i>So sánh giá giữa các nền tảng</h6>
+                    {% if competitor_prices %}
+                    <span class="badge bg-light text-dark" style="font-size:.72rem;">{{ competitor_prices|length + 1 }} nền tảng</span>
+                    {% endif %}
+                </div>
+
+                {% if competitor_prices %}
+                <!-- Shop CLap (luôn ở đầu) -->
+                <div class="comp-card is-ours">
+                    <div class="d-flex align-items-center justify-content-center rounded" style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);flex-shrink:0;">
+                        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CL" height="18">
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="comp-name" style="color: var(--cl-blue);">CLap <span class="badge bg-primary" style="font-size:.6rem; vertical-align:middle;">Shop của bạn</span></div>
+                        <div class="comp-subtitle">
+                            {% if product.stock_quantity > 0 %}
+                            <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Còn hàng ({{ product.stock_quantity }})</span>
+                            {% else %}
+                            <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Hết hàng</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="comp-price" style="color: var(--cl-red);">{{ "{:,.0f}".format(product.current_price) }}₫</div>
+                        {% if analysis.is_cheapest %}
+                        <div class="comp-diff text-success"><i class="bi bi-trophy-fill me-1"></i>Giá tốt nhất</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Đối thủ -->
+                {% for cp in competitor_prices %}
+                {% set diff = product.current_price|float - cp.price|float %}
+                {% set domain = cp.competitor_url.split('/')[2]|replace('www.','') if cp.competitor_url and '/' in cp.competitor_url else '' %}
+                <div class="comp-card">
+                    <img class="comp-favicon"
+                         src="https://www.google.com/s2/favicons?domain={{ domain or cp.competitor_name|lower|replace(' ','') ~ '.vn' }}&sz=32"
+                         alt="{{ cp.competitor_name }}"
+                         onerror="this.src='https://www.google.com/s2/favicons?domain=google.com&sz=32'">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="comp-name">
+                            {{ cp.competitor_name }}
+                            {% if cp.competitor_url %}
+                            <a href="{{ cp.competitor_url }}" target="_blank" rel="noopener" class="text-muted ms-1" style="font-size:.72rem;">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="comp-subtitle text-truncate">
+                            {% if cp.is_in_stock %}
+                            <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Còn hàng</span>
+                            {% else %}
+                            <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Hết hàng</span>
+                            {% endif %}
+                            {% if cp.competitor_product_name %}
+                             · <span class="text-muted">{{ cp.competitor_product_name[:40] }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-end flex-shrink-0">
+                        <div class="comp-price">{{ "{:,.0f}".format(cp.price) }}₫</div>
+                        {% if diff > 0 %}
+                        <div class="comp-diff text-danger">Đắt hơn +{{ "{:,.0f}".format(diff) }}₫</div>
+                        {% elif diff < 0 %}
+                        <div class="comp-diff text-success">Rẻ hơn {{ "{:,.0f}".format(-diff) }}₫</div>
+                        {% else %}
+                        <div class="comp-diff text-muted">Bằng giá</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Biểu đồ thanh giá -->
+                <div class="p-3" style="border-top: 1px solid #f1f5f9;">
+                    <div class="small fw-bold text-muted mb-2"><i class="bi bi-bar-chart me-1"></i>Biểu đồ so sánh giá</div>
+                    {% set max_p = [product.current_price|float] %}
+                    {% for cp in competitor_prices %}{% if cp.price|float > max_p[0] %}{% if max_p.append(cp.price|float) %}{% endif %}{% endif %}{% endfor %}
+
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span style="width:100px; font-size:.75rem; font-weight:600; color:var(--cl-blue);" class="text-truncate">CLap</span>
+                        <div class="flex-grow-1">
+                            <div style="height:24px; background:#eff6ff; border-radius:6px; overflow:hidden; position:relative;">
+                                <div style="width:{{ (product.current_price|float / max_p[-1] * 100)|int }}%; height:100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px;">
+                                    <span style="font-size:.7rem; color:#fff; font-weight:700;">{{ "{:,.0f}".format(product.current_price) }}₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% set bar_colors = [
+                        ('linear-gradient(90deg,#f87171,#dc2626)', '#fef2f2'),
+                        ('linear-gradient(90deg,#fbbf24,#f59e0b)', '#fffbeb'),
+                        ('linear-gradient(90deg,#34d399,#10b981)', '#ecfdf5'),
+                        ('linear-gradient(90deg,#a78bfa,#7c3aed)', '#f5f3ff'),
+                        ('linear-gradient(90deg,#60a5fa,#3b82f6)', '#eff6ff'),
+                        ('linear-gradient(90deg,#fb923c,#ea580c)', '#fff7ed'),
+                    ] %}
+                    {% for cp in competitor_prices %}
+                    {% set bc = bar_colors[loop.index0 % 6] %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span style="width:100px; font-size:.75rem; font-weight:500; color:#475569;" class="text-truncate">{{ cp.competitor_name }}</span>
+                        <div class="flex-grow-1">
+                            <div style="height:24px; background:{{ bc[1] }}; border-radius:6px; overflow:hidden;">
+                                <div style="width:{{ (cp.price|float / max_p[-1] * 100)|int }}%; height:100%; background:{{ bc[0] }}; border-radius:6px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px;">
+                                    <span style="font-size:.7rem; color:#fff; font-weight:700;">{{ "{:,.0f}".format(cp.price) }}₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-search" style="font-size:2.5rem; color:#cbd5e1;"></i>
+                    <p class="text-muted mt-2 mb-0" style="font-size:.85rem;">Chưa có dữ liệu giá từ sàn TMĐT.<br>
+                    <small>Quản trị viên có thể dùng "AI gợi ý giá" khi thêm/sửa sản phẩm để cập nhật.</small></p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ── THÔNG TIN BỔ SUNG ── -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="info-card h-100">
+                        <div class="info-header"><i class="bi bi-truck me-2 text-success"></i>Giao hàng</div>
+                        <div class="info-body" style="font-size:.82rem;">
+                            <div class="mb-2"><i class="bi bi-check2 text-success me-1"></i><strong>Miễn phí</strong> giao hàng nội thành Đà Nẵng (2h)</div>
+                            <div class="mb-2"><i class="bi bi-check2 text-success me-1"></i>Toàn quốc 1-3 ngày làm việc</div>
+                            <div><i class="bi bi-check2 text-success me-1"></i>Nhận hàng kiểm tra trước khi thanh toán</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-card h-100">
+                        <div class="info-header"><i class="bi bi-shield-check me-2 text-primary"></i>Bảo hành</div>
+                        <div class="info-body" style="font-size:.82rem;">
+                            <div class="mb-2"><i class="bi bi-check2 text-primary me-1"></i><strong>1 đổi 1</strong> trong 30 ngày nếu lỗi</div>
+                            <div class="mb-2"><i class="bi bi-check2 text-primary me-1"></i>Bảo hành chính hãng {{ product.warranty or '12 tháng' }}</div>
+                            <div><i class="bi bi-check2 text-primary me-1"></i>Hỗ trợ kỹ thuật trọn đời</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if product.specs %}
+            <div class="info-card">
+                <div class="info-header"><i class="bi bi-file-text me-2"></i>Thông tin thêm</div>
+                <div class="info-body" style="font-size:.85rem;">{{ product.specs }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

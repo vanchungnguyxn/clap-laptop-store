@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt – Laptop Store{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-gear me-2"></i>Cài đặt quy tắc kinh doanh</h4>
+</div>
+
+<div class="row">
+    {% for rule in rules %}
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders me-2"></i>{{ rule.rule_name }}
+                    {% if rule.is_active %}
+                        <span class="badge bg-success ms-2">Đang hoạt động</span>
+                    {% else %}
+                        <span class="badge bg-secondary ms-2">Tắt</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.settings') }}">
+                    <input type="hidden" name="rule_id" value="{{ rule.id }}">
+
+                    <!-- Ngưỡng tồn kho -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-box-seam me-1 text-primary"></i>
+                            Ngưỡng tồn kho để giảm giá
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="inventory_threshold"
+                                   value="{{ rule.inventory_threshold }}" min="1" max="10000" required>
+                            <span class="input-group-text">sản phẩm</span>
+                        </div>
+                        <div class="form-text">
+                            Khi tồn kho vượt ngưỡng này, Inventory Agent sẽ yêu cầu giảm giá.
+                        </div>
+                    </div>
+
+                    <!-- % Giảm giá khi tồn kho cao -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-arrow-down-circle me-1 text-danger"></i>
+                            % Giảm giá khi tồn kho cao
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="discount_percent"
+                                   value="{{ rule.discount_percent }}" min="0" max="50" step="0.5" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">
+                            Mức giảm giá cơ bản khi tồn kho vượt ngưỡng.
+                            Mức giảm sẽ tăng thêm nếu tồn kho vượt xa ngưỡng.
+                        </div>
+                    </div>
+
+                    <!-- % Tăng giá khi đối thủ hết hàng -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-arrow-up-circle me-1 text-success"></i>
+                            % Tăng giá khi đối thủ hết hàng
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="competitor_out_markup"
+                                   value="{{ rule.competitor_out_markup }}" min="0" max="50" step="0.5" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">
+                            Khi tất cả đối thủ hết hàng sản phẩm, Pricing Agent sẽ tự động tăng giá.
+                        </div>
+                    </div>
+
+                    <!-- % Tăng giá khi nhu cầu cao -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-graph-up-arrow me-1 text-info"></i>
+                            % Tăng giá khi nhu cầu thị trường cao
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="high_demand_markup"
+                                   value="{{ rule.high_demand_markup }}" min="0" max="50" step="0.5" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">
+                            Khi phát hiện nhu cầu thị trường đạt đỉnh, hệ thống sẽ tự động tăng giá.
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Lưu thay đổi
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary ms-2">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Hoàn tác
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giải thích logic -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Logic hoạt động</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 p-3 bg-light rounded">
+                    <h6 class="text-danger"><i class="bi bi-1-circle-fill me-1"></i> Tồn kho cao</h6>
+                    <small class="text-muted">
+                        Khi tồn kho &gt; <strong>{{ rule.inventory_threshold }}</strong> sp →
+                        Inventory Agent gửi yêu cầu giảm <strong>{{ rule.discount_percent }}%</strong>
+                        cho Pricing Agent.
+                    </small>
+                </div>
+                <div class="mb-3 p-3 bg-light rounded">
+                    <h6 class="text-success"><i class="bi bi-2-circle-fill me-1"></i> Đối thủ hết hàng</h6>
+                    <small class="text-muted">
+                        Khi tất cả đối thủ hết hàng → Pricing Agent tự động
+                        tăng giá <strong>{{ rule.competitor_out_markup }}%</strong>.
+                    </small>
+                </div>
+                <div class="mb-3 p-3 bg-light rounded">
+                    <h6 class="text-info"><i class="bi bi-3-circle-fill me-1"></i> Nhu cầu đỉnh</h6>
+                    <small class="text-muted">
+                        Khi nhu cầu thị trường cao → Pricing Agent tăng giá
+                        <strong>{{ rule.high_demand_markup }}%</strong>.
+                    </small>
+                </div>
+
+                <hr>
+                <div class="p-3 bg-primary bg-opacity-10 rounded">
+                    <h6><i class="bi bi-diagram-3 me-1"></i> Flow phối hợp Agent</h6>
+                    <small class="text-muted">
+                        <ol class="mb-0 ps-3">
+                            <li>Scheduler thu thập giá đối thủ</li>
+                            <li>Inventory Agent kiểm tra tồn kho</li>
+                            <li>Inventory Agent → gửi yêu cầu giảm giá (nếu cần)</li>
+                            <li>Pricing Agent phân tích + quyết định giá mới</li>
+                            <li>Ghi nhật ký thay đổi giá</li>
+                        </ol>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not rules %}
+    <div class="col-12">
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-gear fs-1"></i>
+            <p class="mt-3">Chưa có quy tắc nào. Hãy khởi tạo database trước.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

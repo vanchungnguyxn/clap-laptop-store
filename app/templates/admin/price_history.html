@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% block title %}Lịch sử giá{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-clock-history me-2"></i>Lịch sử thay đổi giá</h4>
+    <form method="GET" class="d-flex gap-2">
+        <select name="product_id" class="form-select form-select-sm" style="width:250px" onchange="this.form.submit()">
+            <option value="">-- Tất cả --</option>
+            {% for p in products %}<option value="{{ p.id }}" {{ 'selected' if selected_product_id == p.id }}>{{ p.name }}</option>{% endfor %}
+        </select>
+    </form>
+</div>
+
+{% if changes %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0"><h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Biểu đồ</h5></div>
+    <div class="card-body"><canvas id="priceHistoryChart" height="300"></canvas></div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+{% if changes %}
+<div class="table-responsive"><table class="table table-hover align-middle">
+    <thead class="table-light"><tr><th>#</th><th>Thời gian</th><th>Sản phẩm</th><th>Giá cũ</th><th>Giá mới</th><th>%</th><th>Lý do</th><th>Tác nhân</th></tr></thead>
+    <tbody>{% for c in changes %}<tr>
+        <td>{{ c.id }}</td>
+        <td><small>{{ c.created_at.strftime('%d/%m/%Y') }}<br>{{ c.created_at.strftime('%H:%M') }}</small></td>
+        <td><strong>{{ c.product_name }}</strong></td>
+        <td>{{ "{:,.0f}".format(c.old_price) }}₫</td>
+        <td class="fw-bold">{{ "{:,.0f}".format(c.new_price) }}₫</td>
+        <td>{% if c.change_percent > 0 %}<span class="badge bg-success"><i class="bi bi-arrow-up"></i>+{{ c.change_percent }}%</span>
+            {% elif c.change_percent < 0 %}<span class="badge bg-danger"><i class="bi bi-arrow-down"></i>{{ c.change_percent }}%</span>
+            {% else %}<span class="badge bg-secondary">0%</span>{% endif %}</td>
+        <td><span class="d-inline-block text-truncate" style="max-width:300px" title="{{ c.reason }}">{{ c.reason }}</span></td>
+        <td>{% if c.triggered_by=='pricing_agent' %}<span class="badge bg-info"><i class="bi bi-robot"></i> Pricing</span>
+            {% elif c.triggered_by=='inventory_agent' %}<span class="badge bg-warning text-dark"><i class="bi bi-robot"></i> Inventory</span>
+            {% else %}<span class="badge bg-secondary"><i class="bi bi-person"></i> Manual</span>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<div class="text-center text-muted py-5"><i class="bi bi-inbox fs-1"></i><p class="mt-3">Chưa có</p></div>{% endif %}
+</div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const changes = {{ changes|tojson }};
+if (changes && changes.length > 0) {
+    const map = {};
+    changes.forEach(c => { if(!map[c.product_name]) map[c.product_name]=[]; map[c.product_name].push({date:c.created_at, price:parseFloat(c.new_price)}); });
+    const clrs = ['rgb(13,110,253)','rgb(220,53,69)','rgb(25,135,84)','rgb(255,193,7)','rgb(111,66,193)'];
+    const ds = Object.keys(map).map((n,i) => ({label:n, data:map[n].reverse().map(d=>({x:d.date,y:d.price/1e6})),
+        borderColor:clrs[i%clrs.length], fill:false, tension:.3, pointRadius:4}));
+    new Chart(document.getElementById('priceHistoryChart').getContext('2d'), {
+        type:'line', data:{datasets:ds},
+        options:{responsive:true, maintainAspectRatio:false,
+            scales:{x:{type:'category', labels:[...new Set(changes.map(c=>c.created_at.substring(0,10)))].reverse()},
+                    y:{title:{display:true,text:'Triệu ₫'}, ticks:{callback:v=>v.toFixed(1)+'M'}}}}
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,236 @@
+/* ============================================
+   Multi-Agent Laptop Store Dashboard – Styles
+   ============================================ */
+
+/* ── Global ──────────────────────────────────── */
+:root {
+    --sidebar-width: 250px;
+    --sidebar-bg: #1a1d23;
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f4f6f9;
+    min-height: 100vh;
+}
+
+/* ── Sidebar ─────────────────────────────────── */
+.sidebar {
+    width: var(--sidebar-width);
+    min-height: 100vh;
+    background: var(--sidebar-bg) !important;
+    transition: margin-left 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.sidebar .nav-link {
+    padding: 0.7rem 1rem;
+    margin-bottom: 0.25rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.sidebar .nav-link.active {
+    background: var(--primary-gradient) !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-header h5 {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+/* ── Page Content ────────────────────────────── */
+#page-content {
+    margin-left: var(--sidebar-width);
+    transition: margin-left 0.3s ease;
+}
+
+.sidebar-collapsed .sidebar {
+    margin-left: calc(-1 * var(--sidebar-width));
+}
+
+.sidebar-collapsed #page-content {
+    margin-left: 0;
+}
+
+/* ── Cards ────────────────────────────────────── */
+.card {
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card-header {
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+    padding: 1rem 1.25rem;
+}
+
+/* ── Summary Cards ───────────────────────────── */
+.col-xl-3 .card .card-body {
+    padding: 1.25rem;
+}
+
+.col-xl-3 .card h3 {
+    font-weight: 700;
+    font-size: 1.8rem;
+}
+
+.col-xl-3 .card .rounded-circle {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Tables ───────────────────────────────────── */
+.table th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    border-bottom-width: 1px;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* ── Badges ───────────────────────────────────── */
+.badge {
+    font-weight: 500;
+    padding: 0.4em 0.7em;
+    font-size: 0.8rem;
+    border-radius: 0.5rem;
+}
+
+/* ── Buttons ──────────────────────────────────── */
+.btn-primary {
+    background: var(--primary-gradient);
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.25);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+}
+
+/* ── Forms ────────────────────────────────────── */
+.form-control:focus,
+.form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+}
+
+.form-label {
+    margin-bottom: 0.4rem;
+}
+
+/* ── Chart Containers ────────────────────────── */
+canvas {
+    max-width: 100%;
+}
+
+/* ── Navbar ───────────────────────────────────── */
+#page-content .navbar {
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* ── Alerts ───────────────────────────────────── */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    font-size: 0.9rem;
+}
+
+/* ── Loading Spinner ─────────────────────────── */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    display: none;
+}
+
+.spinner-overlay.show {
+    display: flex;
+}
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 992px) {
+    .sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+
+    #page-content {
+        margin-left: 0;
+    }
+
+    .sidebar-open .sidebar {
+        margin-left: 0;
+    }
+}
+
+/* ── Scrollbar ───────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* ── Animations ──────────────────────────────── */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+    animation: fadeIn 0.4s ease-out;
+}

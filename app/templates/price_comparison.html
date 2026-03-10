@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}So sánh giá – Laptop Store{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-graph-up me-2"></i>So sánh giá với đối thủ</h4>
+</div>
+
+{% for item in comparison_data %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0">
+        <h5 class="mb-0">
+            <i class="bi bi-laptop me-2"></i>{{ item.product.name }}
+            <span class="badge bg-primary ms-2">
+                {{ "{:,.0f}".format(item.product.current_price) }}₫
+            </span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Biểu đồ so sánh giá -->
+            <div class="col-md-7">
+                <canvas id="priceChart{{ item.product.id }}" height="200"></canvas>
+            </div>
+            <!-- Bảng chi tiết -->
+            <div class="col-md-5">
+                {% if item.competitor_prices %}
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Đối thủ</th>
+                            <th>Giá</th>
+                            <th>Còn hàng</th>
+                            <th>Chênh lệch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cp in item.competitor_prices %}
+                        <tr>
+                            <td>
+                                <i class="bi bi-shop me-1"></i>
+                                {{ cp.competitor_name }}
+                            </td>
+                            <td class="fw-bold">{{ "{:,.0f}".format(cp.price) }}₫</td>
+                            <td>
+                                {% if cp.is_in_stock %}
+                                    <span class="badge bg-success">Còn</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Hết</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set diff = ((item.product.current_price - cp.price) / cp.price * 100) %}
+                                {% if diff > 0 %}
+                                    <span class="text-danger">+{{ "%.1f" | format(diff) }}%</span>
+                                {% elif diff < 0 %}
+                                    <span class="text-success">{{ "%.1f" | format(diff) }}%</span>
+                                {% else %}
+                                    <span class="text-muted">0%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-search fs-3"></i>
+                    <p class="mt-2">Chưa có dữ liệu giá đối thủ</p>
+                    <small>Hãy chạy thu thập dữ liệu</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% if not comparison_data %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-inbox fs-1"></i>
+    <p class="mt-3">Chưa có sản phẩm nào</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Tạo biểu đồ so sánh giá cho từng sản phẩm
+const comparisonData = {{ comparison_data | tojson }};
+
+comparisonData.forEach(item => {
+    const canvas = document.getElementById('priceChart' + item.product.id);
+    if (!canvas) return;
+
+    const labels = ['Shop của bạn'];
+    const data = [parseFloat(item.product.current_price)];
+    const colors = ['rgba(13, 110, 253, 0.8)'];
+
+    const competitorColors = [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(255, 159, 64, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)',
+    ];
+
+    item.competitor_prices.forEach((cp, idx) => {
+        labels.push(cp.competitor_name);
+        data.push(parseFloat(cp.price));
+        colors.push(competitorColors[idx % competitorColors.length]);
+    });
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Giá (₫)',
+                data: data,
+                backgroundColor: colors,
+                borderRadius: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => new Intl.NumberFormat('vi-VN').format(ctx.raw) + '₫'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: v => (v / 1000000).toFixed(1) + 'M'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

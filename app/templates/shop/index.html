@@ -1,0 +1,423 @@
+{% extends "shop/base.html" %}
+{% block title %}cLap – So sánh giá Laptop AI | Mua đúng giá{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════════════════════════════
+     HERO: BANNER + SIDE PROMOS
+     ═══════════════════════════════════════════ -->
+<section class="container mt-3 mb-3">
+    <div class="row g-3">
+        <!-- Main carousel -->
+        <div class="col-lg-8">
+            <div id="heroBanner" class="carousel slide hero-carousel" data-bs-ride="carousel" data-bs-interval="4500">
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#heroBanner" data-bs-slide-to="0" class="active" style="width:22px;height:3px;border-radius:2px;"></button>
+                    <button type="button" data-bs-target="#heroBanner" data-bs-slide-to="1" style="width:22px;height:3px;border-radius:2px;"></button>
+                    <button type="button" data-bs-target="#heroBanner" data-bs-slide-to="2" style="width:22px;height:3px;border-radius:2px;"></button>
+                    <button type="button" data-bs-target="#heroBanner" data-bs-slide-to="3" style="width:22px;height:3px;border-radius:2px;"></button>
+                </div>
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="hero-slide" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                            <div class="hero-content">
+                                <span class="badge bg-danger mb-2 px-3 py-1" style="font-size:.75rem;">🔥 HOT DEAL</span>
+                                <h2>Laptop Gaming<br>Giảm đến 30%</h2>
+                                <p>Trang bị RTX 40 Series, màn hình 165Hz.<br>AI so sánh giá giúp bạn mua đúng giá tốt nhất thị trường.</p>
+                                <a href="{{ url_for('shop.index', category='Laptop gaming') }}" class="btn btn-danger btn-sm px-4 rounded-pill fw-bold">
+                                    Mua ngay <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                            <div class="d-none d-md-block position-absolute" style="right:2.5rem; bottom:2rem; opacity:.08; z-index:1;">
+                                <i class="bi bi-controller" style="font-size:16rem; color:#fff;"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="hero-slide" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);">
+                            <div class="hero-content">
+                                <span class="badge mb-2 px-3 py-1" style="background: linear-gradient(135deg,#a855f7,#ec4899); font-size:.75rem;">🤖 AI POWERED</span>
+                                <h2>So sánh giá<br>Thông minh với AI</h2>
+                                <p>Quét giá tự động từ 15+ sàn: Shopee, Lazada, Tiki, CellphoneS, FPT Shop...<br>Đảm bảo bạn mua đúng giá tốt nhất.</p>
+                                <a href="{{ url_for('shop.index') }}" class="btn btn-light btn-sm px-4 rounded-pill fw-bold text-primary">
+                                    Khám phá <i class="bi bi-robot ms-1"></i>
+                                </a>
+                            </div>
+                            <div class="d-none d-md-block position-absolute" style="right:2.5rem; bottom:2rem; opacity:.08; z-index:1;">
+                                <i class="bi bi-robot" style="font-size:16rem; color:#fff;"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="hero-slide" style="background: linear-gradient(135deg, #065f46 0%, #10b981 100%);">
+                            <div class="hero-content">
+                                <span class="badge bg-warning text-dark mb-2 px-3 py-1" style="font-size:.75rem;">✨ BEST SELLER</span>
+                                <h2>Laptop Cao Cấp<br>Cho Doanh Nhân</h2>
+                                <p>Ultrabook siêu mỏng, pin 12h+, bảo mật vân tay.<br>Thiết kế sang trọng, hiệu năng đỉnh cao.</p>
+                                <a href="{{ url_for('shop.index', category='Laptop doanh nhân') }}" class="btn btn-warning btn-sm px-4 rounded-pill fw-bold">
+                                    Xem thêm <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                            <div class="d-none d-md-block position-absolute" style="right:2.5rem; bottom:2rem; opacity:.08; z-index:1;">
+                                <i class="bi bi-briefcase" style="font-size:16rem; color:#fff;"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="hero-slide" style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%);">
+                            <div class="hero-content">
+                                <span class="badge bg-light text-dark mb-2 px-3 py-1" style="font-size:.75rem;">💰 TRẢ GÓP 0%</span>
+                                <h2>Mua Laptop<br>Trả góp 0% lãi suất</h2>
+                                <p>Hỗ trợ qua thẻ tín dụng & công ty tài chính.<br>Duyệt nhanh trong 15 phút, thủ tục đơn giản.</p>
+                                <a href="{{ url_for('shop.index') }}" class="btn btn-light btn-sm px-4 rounded-pill fw-bold" style="color:#ea580c;">
+                                    Tìm hiểu <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                            <div class="d-none d-md-block position-absolute" style="right:2.5rem; bottom:2rem; opacity:.08; z-index:1;">
+                                <i class="bi bi-credit-card" style="font-size:16rem; color:#fff;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#heroBanner" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#heroBanner" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Side banners -->
+        <div class="col-lg-4 d-none d-lg-flex flex-column gap-3">
+            <a href="{{ url_for('shop.index', category='Laptop gaming') }}" class="rounded-3 p-3 d-flex align-items-center gap-3 flex-grow-1 text-decoration-none text-white" style="background: linear-gradient(135deg, #7c3aed, #a855f7);">
+                <i class="bi bi-controller" style="font-size:2rem; opacity:.8;"></i>
+                <div>
+                    <div class="fw-bold" style="font-size:.9rem;">Laptop Gaming</div>
+                    <small style="opacity:.85; font-size:.75rem;">RTX 40 Series | Giảm đến 30%</small>
+                </div>
+                <i class="bi bi-chevron-right ms-auto" style="opacity:.5;"></i>
+            </a>
+            <a href="{{ url_for('shop.index', sort='price_asc') }}" class="rounded-3 p-3 d-flex align-items-center gap-3 flex-grow-1 text-decoration-none text-white" style="background: linear-gradient(135deg, #dc2626, #f87171);">
+                <i class="bi bi-tags" style="font-size:2rem; opacity:.8;"></i>
+                <div>
+                    <div class="fw-bold" style="font-size:.9rem;">Deal sốc hôm nay</div>
+                    <small style="opacity:.85; font-size:.75rem;">Giá rẻ nhất thị trường</small>
+                </div>
+                <i class="bi bi-chevron-right ms-auto" style="opacity:.5;"></i>
+            </a>
+            <div class="rounded-3 p-3 d-flex align-items-center gap-3 flex-grow-1 text-white" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
+                <i class="bi bi-shield-check" style="font-size:2rem; opacity:.8;"></i>
+                <div>
+                    <div class="fw-bold" style="font-size:.9rem;">Bảo hành toàn diện</div>
+                    <small style="opacity:.85; font-size:.75rem;">1 đổi 1 trong 30 ngày</small>
+                </div>
+            </div>
+            <div class="rounded-3 p-3 d-flex align-items-center gap-3 flex-grow-1 text-white" style="background: linear-gradient(135deg, #15803d, #4ade80);">
+                <i class="bi bi-truck" style="font-size:2rem; opacity:.8;"></i>
+                <div>
+                    <div class="fw-bold" style="font-size:.9rem;">Giao hàng miễn phí</div>
+                    <small style="opacity:.85; font-size:.75rem;">Nội thành 2h | Toàn quốc 1-3 ngày</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     PROMO ICONS ROW (giống CellphoneS)
+     ═══════════════════════════════════════════ -->
+<section class="container mb-3">
+    <div class="promo-row">
+        <a href="{{ url_for('shop.index', sort='price_asc') }}" class="promo-icon">
+            <i class="bi bi-lightning-charge-fill text-danger"></i>Deal sốc
+        </a>
+        <a href="{{ url_for('shop.index', sort='newest') }}" class="promo-icon">
+            <i class="bi bi-stars text-warning"></i>Hàng mới
+        </a>
+        <a href="{{ url_for('shop.index', category='Laptop gaming') }}" class="promo-icon">
+            <i class="bi bi-controller text-primary"></i>Gaming
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-mortarboard-fill text-info"></i>Ưu đãi SV
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-credit-card-2-front text-success"></i>Trả góp 0%
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-arrow-repeat text-secondary"></i>Thu cũ đổi mới
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-building text-dark"></i>Doanh nghiệp
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-gift-fill" style="color:#a855f7;"></i>Voucher
+        </a>
+        <a href="#" class="promo-icon">
+            <i class="bi bi-headset text-primary"></i>Tư vấn
+        </a>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     FEATURE STRIP
+     ═══════════════════════════════════════════ -->
+<section class="container mb-4">
+    <div class="feat-strip">
+        <div class="fi">
+            <i class="bi bi-robot text-primary"></i>
+            <strong>AI so sánh giá</strong>
+            <small>Quét 15+ sàn TMĐT</small>
+        </div>
+        <div class="fi">
+            <i class="bi bi-truck text-success"></i>
+            <strong>Giao hàng miễn phí</strong>
+            <small>Đơn từ 10 triệu</small>
+        </div>
+        <div class="fi">
+            <i class="bi bi-shield-check text-danger"></i>
+            <strong>Chính hãng 100%</strong>
+            <small>1 đổi 1 trong 30 ngày</small>
+        </div>
+        <div class="fi">
+            <i class="bi bi-credit-card text-warning"></i>
+            <strong>Trả góp 0%</strong>
+            <small>Duyệt nhanh 15 phút</small>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     BRAND TABS + SORT
+     ═══════════════════════════════════════════ -->
+<section class="container mb-3">
+    <div class="bg-white rounded-3 p-3 border">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="fw-bold mb-2" style="font-size:.85rem;">Thương hiệu:</div>
+                <div class="brand-tabs">
+                    <a href="{{ url_for('shop.index', category=selected_category, sort=selected_sort) }}"
+                       class="brand-tab {{ 'active' if not selected_brand }}">Tất cả</a>
+                    {% for b in brands %}
+                    <a href="{{ url_for('shop.index', brand=b, category=selected_category, sort=selected_sort) }}"
+                       class="brand-tab {{ 'active' if selected_brand == b }}">{{ b }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <div class="fw-bold mb-2" style="font-size:.85rem;">Sắp xếp:</div>
+                <div class="sort-pills">
+                    <a href="{{ url_for('shop.index', q=keyword, category=selected_category, brand=selected_brand, sort='name') }}"
+                       class="sort-pill {{ 'active' if selected_sort == 'name' }}">Tên A-Z</a>
+                    <a href="{{ url_for('shop.index', q=keyword, category=selected_category, brand=selected_brand, sort='price_asc') }}"
+                       class="sort-pill {{ 'active' if selected_sort == 'price_asc' }}">Giá thấp</a>
+                    <a href="{{ url_for('shop.index', q=keyword, category=selected_category, brand=selected_brand, sort='price_desc') }}"
+                       class="sort-pill {{ 'active' if selected_sort == 'price_desc' }}">Giá cao</a>
+                    <a href="{{ url_for('shop.index', q=keyword, category=selected_category, brand=selected_brand, sort='newest') }}"
+                       class="sort-pill {{ 'active' if selected_sort == 'newest' }}">Mới nhất</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     PRODUCT GRID
+     ═══════════════════════════════════════════ -->
+<section class="container mb-4">
+    <!-- Section header -->
+    <div class="section-head">
+        <h5>
+            {% if keyword %}
+                <i class="bi bi-search me-2"></i>Kết quả "{{ keyword }}" ({{ products|length }})
+            {% elif selected_category %}
+                {{ selected_category }} ({{ products|length }})
+            {% elif selected_brand %}
+                {{ selected_brand }} ({{ products|length }})
+            {% else %}
+                <i class="bi bi-laptop me-2"></i>Laptop ({{ products|length }} sản phẩm)
+            {% endif %}
+        </h5>
+        {% if keyword or selected_category or selected_brand %}
+        <a href="{{ url_for('shop.index') }}"><i class="bi bi-x-circle me-1"></i>Xóa bộ lọc</a>
+        {% endif %}
+    </div>
+
+    <div class="row g-3">
+        {% for product in products %}
+        <div class="col-xl-3 col-lg-4 col-md-6 col-6 fade-in" style="animation-delay: {{ loop.index0 * 0.04 }}s;">
+            <div class="product-card h-100">
+                <div class="card-img-wrap">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                    {% else %}
+                    <i class="bi bi-laptop" style="font-size:3rem; color:#cbd5e1;"></i>
+                    {% endif %}
+
+                    {% if product.stock_quantity is defined and product.stock_quantity <= 0 %}
+                    <span class="badge-promo" style="background:#475569;">Hết hàng</span>
+                    {% elif product.stock_quantity is defined and product.stock_quantity < 5 %}
+                    <span class="badge-promo" style="background:var(--cl-gradient-red);">Sắp hết</span>
+                    {% endif %}
+
+                    {% set our = product.current_price|float %}
+                    {% if product.min_competitor_price and our <= product.min_competitor_price %}
+                    <span class="badge-best-price"><i class="bi bi-check-circle me-1"></i>Giá tốt nhất</span>
+                    {% endif %}
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    <div class="prod-name">
+                        <a href="{{ url_for('shop.product_detail', product_id=product.id) }}" class="stretched-link">
+                            {{ product.name }}
+                        </a>
+                    </div>
+
+                    {% if product.cpu or product.ram or product.storage %}
+                    <div class="prod-specs">
+                        {% if product.cpu %}<span><i class="bi bi-cpu"></i> {{ product.cpu[:25] }}</span>{% endif %}
+                        {% if product.ram %}<span><i class="bi bi-memory"></i> {{ product.ram[:12] }}</span>{% endif %}
+                        {% if product.storage %}<span><i class="bi bi-device-ssd"></i> {{ product.storage[:12] }}</span>{% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-auto">
+                        <div class="d-flex align-items-baseline gap-1 flex-wrap">
+                            <span class="prod-price">{{ "{:,.0f}".format(product.current_price) }}₫</span>
+                            {% if product.min_competitor_price and product.min_competitor_price > our %}
+                            <span class="prod-price-old">{{ "{:,.0f}".format(product.min_competitor_price) }}₫</span>
+                            {% endif %}
+                        </div>
+
+                        {% if product.min_competitor_price %}
+                            {% if our <= product.min_competitor_price %}
+                            <div class="prod-promo-text"><i class="bi bi-graph-down-arrow me-1"></i>Rẻ hơn các sàn TMĐT</div>
+                            {% else %}
+                            <div style="font-size:.7rem; color:#64748b; margin-top:3px;">
+                                <i class="bi bi-shop"></i> Sàn khác từ {{ "{:,.0f}".format(product.min_competitor_price) }}₫
+                            </div>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if product.competitor_prices %}
+                        <div class="mt-2 pt-2" style="border-top:1px solid #f1f5f9;">
+                            {% for cp in product.competitor_prices[:2] %}
+                            <div class="d-flex justify-content-between" style="font-size:.7rem; line-height:1.8;">
+                                <span class="text-muted text-truncate" style="max-width:55%;"><i class="bi bi-shop"></i> {{ cp.competitor_name }}</span>
+                                <span class="{{ 'text-success' if cp.price|float > our else 'text-danger' }} fw-bold">{{ "{:,.0f}".format(cp.price) }}₫</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not products %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size:4rem; color:#cbd5e1;"></i>
+        <h5 class="text-muted mt-3 mb-2">Không tìm thấy sản phẩm</h5>
+        <p class="text-muted small mb-3">Thử tìm kiếm với từ khóa khác hoặc thay đổi bộ lọc</p>
+        <a href="{{ url_for('shop.index') }}" class="btn btn-danger btn-sm rounded-pill px-4 fw-bold">
+            <i class="bi bi-arrow-left me-1"></i>Xem tất cả
+        </a>
+    </div>
+    {% endif %}
+</section>
+
+<!-- ═══════════════════════════════════════════
+     MID PROMO BANNER
+     ═══════════════════════════════════════════ -->
+<section class="container mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <a href="{{ url_for('shop.index', category='Laptop gaming') }}" class="d-block rounded-3 p-4 text-white text-decoration-none" style="background: linear-gradient(135deg, #4c1d95, #7c3aed); min-height:140px;">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-controller" style="font-size:3rem; opacity:.7;"></i>
+                    <div>
+                        <div class="fw-bold" style="font-size:1.1rem;">Laptop Gaming</div>
+                        <div style="font-size:.85rem; opacity:.85;">RTX 40 Series | Màn hình 165Hz</div>
+                        <div class="mt-2 badge bg-warning text-dark px-3 py-1">Giảm đến 30%</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="#" class="d-block rounded-3 p-4 text-white text-decoration-none" style="background: linear-gradient(135deg, #0f766e, #14b8a6); min-height:140px;">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-arrow-repeat" style="font-size:3rem; opacity:.7;"></i>
+                    <div>
+                        <div class="fw-bold" style="font-size:1.1rem;">Thu cũ đổi mới</div>
+                        <div style="font-size:.85rem; opacity:.85;">Trợ giá lên đến 3 triệu đồng</div>
+                        <div class="mt-2 badge bg-light text-dark px-3 py-1">Tìm hiểu ngay</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     TẠI SAO CHỌN CLAP
+     ═══════════════════════════════════════════ -->
+<section class="container mb-4">
+    <div class="rounded-3 p-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <h5 class="text-white fw-bold text-center mb-4">Tại sao chọn <span style="color:#a855f7;">CLap</span>?</h5>
+        <div class="row g-3">
+            <div class="col-md-3 col-6">
+                <div class="text-center text-white p-2">
+                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle" style="width:52px;height:52px; background:linear-gradient(135deg,#667eea,#764ba2);">
+                        <i class="bi bi-robot fs-5"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size:.82rem;">AI So sánh Giá</div>
+                    <small class="text-white-50" style="font-size:.7rem;">Quét 15+ sàn TMĐT mỗi ngày</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center text-white p-2">
+                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle" style="width:52px;height:52px; background:linear-gradient(135deg,#f093fb,#f5576c);">
+                        <i class="bi bi-graph-up-arrow fs-5"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size:.82rem;">Minh bạch 100%</div>
+                    <small class="text-white-50" style="font-size:.7rem;">Hiển thị giá đối thủ trực tiếp</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center text-white p-2">
+                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle" style="width:52px;height:52px; background:linear-gradient(135deg,#10b981,#059669);">
+                        <i class="bi bi-patch-check fs-5"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size:.82rem;">Chính hãng</div>
+                    <small class="text-white-50" style="font-size:.7rem;">Bảo hành toàn diện 24 tháng</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="text-center text-white p-2">
+                    <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle" style="width:52px;height:52px; background:linear-gradient(135deg,#f59e0b,#ea580c);">
+                        <i class="bi bi-headset fs-5"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size:.82rem;">Hỗ trợ 24/7</div>
+                    <small class="text-white-50" style="font-size:.7rem;">Tổng đài 1900.1234</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     NEWSLETTER
+     ═══════════════════════════════════════════ -->
+<section class="container mb-5">
+    <div class="newsletter-box">
+        <h5 class="fw-bold mb-1">Đăng ký nhận thông báo khuyến mãi</h5>
+        <p class="small mb-3" style="opacity:.9;">Nhận ngay voucher giảm 200.000₫ cho đơn hàng đầu tiên!</p>
+        <form class="d-inline-flex" onsubmit="event.preventDefault(); alert('Cảm ơn bạn đã đăng ký! 🎉');">
+            <input type="email" placeholder="Nhập email của bạn..." required>
+            <button type="submit">ĐĂNG KÝ</button>
+        </form>
+    </div>
+</section>
+{% endblock %}
