@@ -3,7 +3,9 @@
 -- Database: laptop_pricing (tạo bởi Docker)
 -- ============================================
 
-USE laptop_pricing;
+-- Database được chọn tự động bởi connection (Config.DB_NAME)
+-- Trên Railway: database = "railway"
+-- Trên local:   database = "laptop_pricing"
 
 -- ── Bảng sản phẩm ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS products (
@@ -138,6 +140,11 @@ INSERT INTO admin_users (username, password_hash, employee_code, full_name, role
     ('admin', '$2b$12$9vfLsCyM8NmPalTdN46FmOi26PM9Fy9azurabZVpa6jN4nVKmgH6a', 'NV001', 'Quản trị viên', 'admin');
 
 INSERT INTO products (name, brand, model, current_price, cost_price, stock_quantity, category) VALUES
+    ('Dell Inspiron 15 3520', 'Dell', 'Inspiron 15 3520', 15990000, 13000000, 50, 'Laptop'),
+    ('HP Pavilion 14-dv2035TU', 'HP', 'Pavilion 14', 17490000, 14500000, 30, 'Laptop'),
+    ('MacBook Air M2 2022', 'Apple', 'Air M2', 27990000, 24000000, 20, 'Laptop'),
+    ('Asus VivoBook 15 X1502ZA', 'Asus', 'VivoBook 15', 13990000, 11000000, 80, 'Laptop'),
+    ('Lenovo IdeaPad Slim 3 15IAH8', 'Lenovo', 'IdeaPad Slim 3', 12490000, 10000000, 60, 'Laptop');
 
 -- ── Dữ liệu giá đối thủ mẫu ─────────────────────────
 INSERT INTO competitor_prices (product_id, competitor_id, competitor_product_name, competitor_url, price, is_in_stock) VALUES

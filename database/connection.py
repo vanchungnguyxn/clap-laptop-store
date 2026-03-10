@@ -53,26 +53,44 @@ def init_db():
     with open(schema_path, "r", encoding="utf-8") as f:
         schema_sql = f.read()
 
-    # Thử kết nối không chọn DB (local dev: tạo DB mới)
-    # Trên Railway, CREATE DATABASE có thể bị từ chối quyền → bỏ qua
+    # Local dev: tạo DB nếu chưa có
     try:
-        conn = get_connection_without_db()
-        cursor = conn.cursor()
-    except Exception:
-        conn = get_connection()
-        cursor = conn.cursor()
+        tmp = get_connection_without_db()
+        cur = tmp.cursor()
+        try:
+            cur.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{Config.DB_NAME}` "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+            tmp.commit()
+        except mysql.connector.Error as e:
+            if e.errno in (1007, 1044):
+                pass
+            else:
+                print(f"[DB] Create DB note: {e}")
+        finally:
+            cur.close()
+            tmp.close()
+    except Exception as e:
+        print(f"[DB] Pre-create DB skip: {e}")
+
+    # Kết nối tới đúng database (railway / laptop_pricing)
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
         for statement in schema_sql.split(";"):
             statement = statement.strip()
-            if statement:
-                try:
-                    cursor.execute(statement)
-                except mysql.connector.Error as e:
-                    if e.errno in (1050, 1007, 1062, 1044):
-                        pass
-                    else:
-                        print(f"[DB] SQL Warning: {e}")
+            if not statement or statement.startswith("--"):
+                continue
+            try:
+                cursor.execute(statement)
+            except mysql.connector.Error as e:
+                # 1050=table exists, 1007=db exists, 1062=duplicate entry, 1044=access denied
+                if e.errno in (1050, 1007, 1062, 1044):
+                    pass
+                else:
+                    print(f"[DB] SQL Warning: {e}")
 
         conn.commit()
         print("[DB] Database initialized successfully")
