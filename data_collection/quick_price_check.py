@@ -1,47 +1,80 @@
 """
-Quick Price Check – Lấy giá realtime từ Google Search.
+Quick Price Check – Lay gia realtime tu Google Search.
 
 Flow:
-1. Search Google: "{tên sản phẩm} giá bán"
-2. Lấy top 10 kết quả (URL + title)
-3. Vào từng trang, trích xuất giá
-4. Trả về: tên web, logo (favicon), giá, link
+1. Search Google: "{ten san pham} gia ban"  (Selenium)
+2. Lay top 10 ket qua (URL + title)
+3. Round 1: requests+BS4 (fast ~0.5s/page)
+4. Round 2: Selenium fallback cho trang can JS (Shopee, Lazada...)
+5. Tra ve: ten web, logo (favicon), gia, link
 
-Sử dụng Selenium headless cho cả Google lẫn các trang kết quả.
+Optimized: requests fast-path, cached ChromeDriver, driver pool reuse.
 """
 
+import json as _json
 import re
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import quote, urlparse
 
+import requests as _requests
+from bs4 import BeautifulSoup
+
 MIN_LAPTOP_PRICE = 3_000_000
 MIN_REASONABLE_PRICE = 5_000_000
 MAX_REASONABLE_PRICE = 200_000_000
 
 _NEGATIVE_KEYWORDS = {
-    # Linh kiện / phụ kiện dễ dính nhầm
-    "linh kiện", "linh kien", "phụ kiện", "phu kien", "phụ kiện laptop", "phu kien laptop",
-    "sạc", "sac", "charger", "adapter", "nguồn", "nguon",
-    "pin", "battery", "bàn phím", "ban phim", "keyboard",
-    "chuột", "chuot", "mouse", "tai nghe", "headphone",
-    "ram", "ssd", "hdd", "ổ cứng", "o cung", "ổ cứng laptop", "o cung laptop",
-    "màn hình", "man hinh", "screen", "lcd",
-    "card đồ họa", "card do hoa", "vga", "gpu",
-    "case", "vỏ", "vo", "tản nhiệt", "tan nhiet", "cooler",
+    "linh kien", "linh kiện", "phu kien", "phụ kiện",
+    "sac", "sạc", "charger", "adapter", "nguon", "nguồn",
+    "pin", "battery", "ban phim", "bàn phím", "keyboard",
+    "chuot", "chuột", "mouse", "tai nghe", "headphone",
+    "ram", "ssd", "hdd", "o cung", "ổ cứng",
+    "man hinh", "màn hình", "screen", "lcd",
+    "card do hoa", "card đồ họa", "vga", "gpu",
+    "case", "vo", "vỏ", "tan nhiet", "tản nhiệt", "cooler",
 }
+
+_REQUESTS_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
+# Cached ChromeDriver path (install once)
+_chromedriver_path: str | None = None
+_chromedriver_lock = threading.Lock()
 
 # Selenium driver (thread-local)
 _thread_local = threading.local()
 
 
+# ═══════════════════════════════════════════════════════════
+#  CHROME DRIVER (cached + pooled)
+# ═══════════════════════════════════════════════════════════
+
+def _get_chromedriver_path() -> str:
+    """Install ChromeDriver once, cache the path globally."""
+    global _chromedriver_path
+    if _chromedriver_path:
+        return _chromedriver_path
+    with _chromedriver_lock:
+        if _chromedriver_path:
+            return _chromedriver_path
+        from webdriver_manager.chrome import ChromeDriverManager
+        _chromedriver_path = ChromeDriverManager().install()
+        return _chromedriver_path
+
+
 def _new_driver():
-    """Tạo Chrome headless driver mới (không tái sử dụng giữa threads)."""
+    """Tao Chrome headless driver moi (dung cached chromedriver path)."""
     from selenium import webdriver
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
 
     opts = Options()
     opts.add_argument("--headless=new")
@@ -50,22 +83,17 @@ def _new_driver():
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1920,1080")
     opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-    opts.add_argument(
-        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
-    )
+    opts.add_argument("--user-agent=" + _REQUESTS_HEADERS["User-Agent"])
     opts.add_argument("--lang=vi-VN")
-    prefs = {"profile.managed_default_content_settings.images": 2}
-    opts.add_experimental_option("prefs", prefs)
-
-    # Stealth
     opts.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     opts.add_experimental_option("useAutomationExtension", False)
+    opts.add_experimental_option("prefs", {
+        "profile.managed_default_content_settings.images": 2,
+    })
 
-    service = Service(ChromeDriverManager().install())
+    service = Service(_get_chromedriver_path())
     driver = webdriver.Chrome(service=service, options=opts)
-    driver.set_page_load_timeout(15)
+    driver.set_page_load_timeout(12)
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
     })
@@ -73,7 +101,7 @@ def _new_driver():
 
 
 def _get_driver():
-    """Lấy driver cho thread hiện tại (tạo mới nếu chưa có)."""
+    """Lay driver cho thread hien tai (tao moi neu chua co)."""
     driver = getattr(_thread_local, "driver", None)
     if driver is not None:
         try:
@@ -86,31 +114,24 @@ def _get_driver():
     return driver
 
 
-def _parse_vn_price(text: str) -> float:
-    """
-    Parse chuỗi giá VN → số (Clean & Split).
+# ═══════════════════════════════════════════════════════════
+#  UTILS
+# ═══════════════════════════════════════════════════════════
 
-    Tìm các cụm số có cấu trúc tiền tệ VN (VD: 24.990.000 hoặc 24,990,000),
-    lọc theo range hợp lý, và lấy giá **đầu tiên** xuất hiện (web thường đặt
-    giá khuyến mãi / giá hiện tại trước giá cũ).
-    """
+def _parse_vn_price(text: str) -> float:
+    """Parse chuoi gia VN -> so. Lay gia dau tien trong range hop ly."""
     if not text:
         return 0.0
-
     text = re.sub(r"\s+", " ", str(text))
-
     candidates = re.findall(r"\b\d{1,3}(?:[.,]\d{3}){1,3}\b", text)
-
     for c in candidates:
         num = int(c.replace(".", "").replace(",", ""))
         if MIN_REASONABLE_PRICE < num < MAX_REASONABLE_PRICE:
             return float(num)
-
     return 0.0
 
 
 def _get_domain(url: str) -> str:
-    """Lấy domain từ URL. VD: 'https://www.lazada.vn/abc' → 'lazada.vn'"""
     try:
         parsed = urlparse(url)
         domain = parsed.netloc
@@ -122,22 +143,21 @@ def _get_domain(url: str) -> str:
 
 
 def _get_site_name(domain: str) -> str:
-    """Chuyển domain → tên hiển thị."""
     name_map = {
         "shopee.vn": "Shopee",
         "lazada.vn": "Lazada",
         "tiki.vn": "Tiki",
         "gearvn.com": "GearVN",
         "cellphones.com.vn": "CellphoneS",
-        "phongvu.vn": "Phong Vũ",
+        "phongvu.vn": "Phong Vu",
         "fptshop.com.vn": "FPT Shop",
-        "nguyenkim.com": "Nguyễn Kim",
+        "nguyenkim.com": "Nguyen Kim",
         "hacom.vn": "Hacom",
-        "thegioididong.com": "Thế Giới Di Động",
-        "dienmayxanh.com": "Điện Máy Xanh",
-        "anphatpc.com.vn": "An Phát",
+        "thegioididong.com": "The Gioi Di Dong",
+        "dienmayxanh.com": "Dien May Xanh",
+        "anphatpc.com.vn": "An Phat",
         "memoryzone.com.vn": "Memory Zone",
-        "phucanh.vn": "Phúc Anh",
+        "phucanh.vn": "Phuc Anh",
         "hanoicomputer.vn": "Hanoi Computer",
         "laptopworld.vn": "Laptop World",
     }
@@ -145,63 +165,60 @@ def _get_site_name(domain: str) -> str:
 
 
 def _get_favicon_url(domain: str) -> str:
-    """Lấy URL favicon/logo qua Google Favicon Service."""
     return f"https://www.google.com/s2/favicons?domain={domain}&sz=32"
 
 
 def _is_negative_result(title: str, snippet: str = "") -> bool:
-    """Lọc kết quả phụ kiện/linh kiện để tránh lấy nhầm khi search tên máy."""
     hay = f"{title} {snippet}".lower()
     return any(kw in hay for kw in _NEGATIVE_KEYWORDS)
 
 
-
 # ═══════════════════════════════════════════════════════════
-#  BƯỚC 1: SEARCH GOOGLE
+#  STEP 1: GOOGLE SEARCH (Selenium)
 # ═══════════════════════════════════════════════════════════
 
 def _google_search(keyword: str, max_results: int = 10) -> list[dict]:
-    """
-    Search Google và trả về danh sách kết quả.
-    Returns: [{"title": str, "url": str, "snippet": str, "domain": str}, ...]
-    """
     results = []
     driver = _get_driver()
 
-    query = f"{keyword} giá bán"
+    query = f"{keyword} gia ban"
     url = f"https://www.google.com/search?q={quote(query)}&hl=vi&gl=vn&num={max_results}"
 
     try:
         print(f"[Google] Searching: {query}")
         driver.get(url)
-        time.sleep(2)
+        time.sleep(1)
 
         from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
 
-        # Consent page (nếu có)
+        try:
+            WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.g, div[data-hveid]"))
+            )
+        except Exception:
+            pass
+
+        # Consent page
         try:
             consent = driver.find_elements(By.CSS_SELECTOR,
                 "button[id='L2AGLb'], form[action*='consent'] button")
             if consent:
                 consent[0].click()
-                time.sleep(1)
+                time.sleep(0.5)
         except Exception:
             pass
 
-        # Lấy search results
         result_elements = driver.find_elements(By.CSS_SELECTOR, "div.g, div[data-hveid]")
 
         for el in result_elements:
             try:
-                # URL
                 link_el = el.find_element(By.CSS_SELECTOR, "a[href^='http']")
                 link_url = link_el.get_attribute("href") or ""
-
-                # Bỏ Google internal links
                 if "google.com" in link_url or not link_url.startswith("http"):
                     continue
 
-                # Title
                 title = ""
                 for sel in ["h3", "a h3", "div[role='heading']"]:
                     try:
@@ -211,7 +228,6 @@ def _google_search(keyword: str, max_results: int = 10) -> list[dict]:
                     except Exception:
                         continue
 
-                # Snippet (có thể chứa giá)
                 snippet = ""
                 for sel in ["div.VwiC3b", "span.aCOpRe", "div[data-sncf]"]:
                     try:
@@ -224,12 +240,9 @@ def _google_search(keyword: str, max_results: int = 10) -> list[dict]:
                 domain = _get_domain(link_url)
                 if title and domain:
                     results.append({
-                        "title": title,
-                        "url": link_url,
-                        "snippet": snippet,
-                        "domain": domain,
+                        "title": title, "url": link_url,
+                        "snippet": snippet, "domain": domain,
                     })
-
             except Exception:
                 continue
 
@@ -242,157 +255,154 @@ def _google_search(keyword: str, max_results: int = 10) -> list[dict]:
 
 
 # ═══════════════════════════════════════════════════════════
-#  BƯỚC 2: VÀO TỪNG TRANG LẤY GIÁ
+#  STEP 2a: FAST PRICE EXTRACTION (requests + BeautifulSoup)
 # ═══════════════════════════════════════════════════════════
 
-def _extract_price_from_page(url: str) -> float:
-    """
-    Truy cập URL và trích xuất giá sản phẩm.
-
-    Thứ tự ưu tiên:
-      P1 – Metadata:  JSON-LD (offers.price) → meta[product:price:amount]
-      P2 – Specific CSS selectors (current/sale price, loại trừ old-price)
-      P3 – Regex giá VN trên visible text (fallback)
-    """
-    driver = _get_driver()
+def _parse_price_flexible(value) -> float:
+    """Parse price from JSON-LD: handles both plain int (15990000) and VN format (15.990.000)."""
     try:
-        driver.get(url)
-        time.sleep(3)
+        num = float(value)
+        if MIN_LAPTOP_PRICE <= num < MAX_REASONABLE_PRICE:
+            return num
+    except (ValueError, TypeError):
+        pass
+    return _parse_vn_price(str(value))
 
-        from selenium.webdriver.common.by import By
-        import json as _json
 
-        # ── P1: JSON-LD structured data (offers.price) ────────
+def _extract_price_from_html(html: str) -> float:
+    """Extract gia tu raw HTML bang BeautifulSoup (P1: JSON-LD, P2: meta, P3: CSS, P4: regex)."""
+    soup = BeautifulSoup(html, "lxml")
+
+    # P1: JSON-LD structured data
+    for script in soup.find_all("script", type="application/ld+json"):
         try:
-            scripts = driver.find_elements(
-                By.CSS_SELECTOR, "script[type='application/ld+json']")
-            for sc in scripts:
-                try:
-                    raw = _json.loads(sc.get_attribute("innerHTML"))
-                    items = raw if isinstance(raw, list) else [raw]
-                    for item in items:
-                        offers = item.get("offers", item.get("Offers", {}))
-                        if isinstance(offers, list):
-                            offers = offers[0] if offers else {}
-                        for key in ("price", "lowPrice"):
-                            p = offers.get(key)
-                            if p is not None:
-                                price = _parse_vn_price(str(p))
-                                if price >= MIN_LAPTOP_PRICE:
-                                    return price
-                except Exception:
-                    continue
-        except Exception:
-            pass
-
-        # ── P1b: meta tag price ───────────────────────────────
-        meta_selectors = [
-            "meta[property='product:price:amount']",
-            "meta[property='og:price:amount']",
-            "meta[itemprop='price']",
-        ]
-        for ms in meta_selectors:
-            try:
-                meta = driver.find_element(By.CSS_SELECTOR, ms)
-                price = _parse_vn_price(meta.get_attribute("content") or "")
-                if price >= MIN_LAPTOP_PRICE:
-                    return price
-            except Exception:
-                continue
-
-        # ── P2: Specific CSS selectors (loại trừ old-price) ──
-        current_price_selectors = [
-            ".current-price",
-            ".giaban",
-            "span.price-new",
-            "[class*='product-price'] [class*='current']",
-            "[class*='price-current']",
-            "[class*='sale-price']",
-            "[class*='special-price']",
-            "[class*='final-price']",
-            "[class*='box-price'] [class*='current']",
-            "[class*='pro-price']",
-            "span.pdp-price",
-            "span.product-price__current-price",
-            "div.pqTWkA",
-            "[itemprop='price']",
-            "[data-price]",
-        ]
-        generic_price_selectors = [
-            "[class*='product-price']",
-            "[class*='box-price']",
-            "[class*='detail'] [class*='price']",
-            "span.price",
-            "p.price",
-            "div.price",
-        ]
-
-        for sel in current_price_selectors + generic_price_selectors:
-            try:
-                elements = driver.find_elements(By.CSS_SELECTOR, sel)
-                for el in elements:
-                    cls = (el.get_attribute("class") or "").lower()
-                    if any(neg in cls for neg in
-                           ("old-price", "discount-amount", "original",
-                            "list-price", "compare-price")):
-                        continue
-
-                    text = el.text.strip()
-                    price = _parse_vn_price(text)
-                    if price >= MIN_LAPTOP_PRICE:
-                        return price
-
-                    dp = el.get_attribute("data-price") or el.get_attribute("content")
-                    if dp:
-                        price = _parse_vn_price(dp)
+            raw = _json.loads(script.string or "")
+            items = raw if isinstance(raw, list) else [raw]
+            for item in items:
+                offers = item.get("offers", item.get("Offers", {}))
+                if isinstance(offers, list):
+                    offers = offers[0] if offers else {}
+                for key in ("price", "lowPrice"):
+                    p = offers.get(key)
+                    if p is not None:
+                        price = _parse_price_flexible(p)
                         if price >= MIN_LAPTOP_PRICE:
                             return price
-            except Exception:
-                continue
+        except Exception:
+            continue
 
-        # ── P3: Regex giá VN trong visible text (fallback) ────
-        try:
-            body_text = driver.find_element(By.TAG_NAME, "body").text
-            price = _parse_vn_price(body_text)
+    # P2: meta tags (content can be plain int "14290000" or formatted "14.290.000")
+    for attr in [
+        {"property": "product:price:amount"},
+        {"property": "og:price:amount"},
+        {"attrs": {"itemprop": "price"}},
+    ]:
+        tag = soup.find("meta", **attr) if "attrs" in attr else soup.find("meta", attrs=attr)
+        if tag:
+            price = _parse_price_flexible(tag.get("content", ""))
             if price >= MIN_LAPTOP_PRICE:
                 return price
-        except Exception:
-            pass
 
-    except Exception as e:
-        print(f"[Extract] Error on {url[:50]}: {e}")
+    # P3: CSS selectors for current/sale price
+    neg_classes = ("old-price", "discount-amount", "original", "list-price", "compare-price")
+    price_selectors = [
+        ".current-price", ".giaban", "span.price-new",
+        "[class*='price-current']", "[class*='sale-price']",
+        "[class*='special-price']", "[class*='final-price']",
+        "[class*='pro-price']", "span.pdp-price",
+        "span.product-price__current-price",
+        "[itemprop='price']", "[data-price]",
+        "[class*='product-price']", "[class*='box-price']",
+        "span.price", "p.price", "div.price",
+    ]
+    for sel in price_selectors:
+        try:
+            for el in soup.select(sel):
+                cls = " ".join(el.get("class", [])).lower()
+                if any(neg in cls for neg in neg_classes):
+                    continue
+                price = _parse_vn_price(el.get_text())
+                if price >= MIN_LAPTOP_PRICE:
+                    return price
+                for attr_name in ("data-price", "content"):
+                    val = el.get(attr_name)
+                    if val:
+                        price = _parse_price_flexible(val)
+                        if price >= MIN_LAPTOP_PRICE:
+                            return price
+        except Exception:
+            continue
+
+    # P4: regex fallback on visible text
+    body = soup.find("body")
+    if body:
+        price = _parse_vn_price(body.get_text(separator=" "))
+        if price >= MIN_LAPTOP_PRICE:
+            return price
 
     return 0.0
 
 
-def _extract_price_from_page_isolated(url: str) -> float:
-    """
-    Dùng cho multithreading: tạo driver riêng, extract, rồi quit.
-    Tránh chia sẻ driver giữa threads.
-    """
-    driver = None
+def _extract_price_requests(url: str) -> float:
+    """Fast path: fetch page via requests + extract price from HTML. ~0.5-1s."""
     try:
-        driver = _new_driver()
-        # tạm gán vào thread_local để _extract_price_from_page dùng đúng driver
-        _thread_local.driver = driver
-        return _extract_price_from_page(url)
-    finally:
-        try:
-            if driver:
-                driver.quit()
-        except Exception:
-            pass
-        _thread_local.driver = None
+        resp = _requests.get(url, headers=_REQUESTS_HEADERS, timeout=6, allow_redirects=True)
+        if resp.status_code == 200 and len(resp.text) > 500:
+            return _extract_price_from_html(resp.text)
+    except Exception:
+        pass
+    return 0.0
 
 
 # ═══════════════════════════════════════════════════════════
-#  BƯỚC 3: HÀM TỔNG HỢP
+#  STEP 2b: SELENIUM FALLBACK (for JS-rendered pages)
+# ═══════════════════════════════════════════════════════════
+
+_JS_REQUIRED_DOMAINS = {"shopee.vn", "lazada.vn", "tiki.vn"}
+
+
+def _extract_price_selenium(url: str) -> float:
+    """Selenium fallback for pages that require JS rendering."""
+    driver = _get_driver()
+    try:
+        driver.get(url)
+
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR,
+                    "[class*='price'], [itemprop='price'], script[type='application/ld+json']"))
+            )
+        except Exception:
+            pass
+
+        html = driver.page_source
+        return _extract_price_from_html(html)
+
+    except Exception as e:
+        print(f"[Selenium] Error on {url[:60]}: {e}")
+    return 0.0
+
+
+def _extract_price_selenium_isolated(url: str) -> float:
+    """Selenium extraction in thread pool: reuse thread-local driver."""
+    try:
+        _get_driver()
+        return _extract_price_selenium(url)
+    except Exception:
+        return 0.0
+
+
+# ═══════════════════════════════════════════════════════════
+#  STEP 3: SCORING & MAIN FUNCTION
 # ═══════════════════════════════════════════════════════════
 
 def _extract_model_keywords(product_name: str, brand: str = "") -> list[str]:
-    """Trích model keywords để lọc kết quả."""
-    stop = {"laptop", "gaming", "máy", "tính", "xách", "tay",
-            "notebook", "pc", "new", "mới", "chính", "hãng",
+    stop = {"laptop", "gaming", "may", "tinh", "xach", "tay",
+            "notebook", "pc", "new", "moi", "chinh", "hang",
             brand.lower() if brand else ""}
     stop.discard("")
     words = re.findall(r'[A-Za-z0-9]+', product_name)
@@ -408,7 +418,6 @@ def _extract_model_keywords(product_name: str, brand: str = "") -> list[str]:
 
 
 def _score(result_title: str, model_kws: list[str], brand: str) -> float:
-    """Tính điểm khớp."""
     name = result_title.lower()
     if brand and brand.lower() not in name:
         return 0.0
@@ -421,30 +430,22 @@ def _score(result_title: str, model_kws: list[str], brand: str) -> float:
 def fetch_all_competitor_prices(keyword: str, brand: str = "",
                                 limit: int = 8) -> dict:
     """
-    Tìm giá sản phẩm từ Google → vào từng trang lấy giá.
+    Tim gia san pham tu Google -> vao tung trang lay gia.
 
-    Returns:
-        dict: {
-            "results": [{
-                "site_name": str,
-                "domain": str,
-                "favicon_url": str,
-                "product_title": str,
-                "price": float,
-                "url": str,
-                "match_score": float,
-            }, ...],
-            "all_prices": [float],
-            "stats": {...},
-        }
+    Optimized flow:
+      1. Google Search (Selenium)
+      2. Extract from snippet (instant)
+      3. Round 1: requests+BS4 (fast, parallel)
+      4. Round 2: Selenium fallback (only for JS pages that failed round 1)
     """
+    t_start = time.time()
     model_kws = _extract_model_keywords(keyword, brand)
     print(f"[PriceCheck] Product: '{keyword}' | Brand: '{brand}' | Keywords: {model_kws}")
 
-    # ── Bước 1: Google Search ─────────────────────────────
+    # -- Step 1: Google Search --
     google_results = _google_search(keyword, max_results=limit + 5)
 
-    # ── Bước 2: Chuẩn hoá + lọc kết quả ───────────────────
+    # -- Step 2: Filter --
     filtered = []
     visited_domains = set()
     skip_domains = {"google.com", "youtube.com", "wikipedia.org", "facebook.com", "tiktok.com", "reddit.com"}
@@ -460,19 +461,19 @@ def fetch_all_competitor_prices(keyword: str, brand: str = "",
         visited_domains.add(domain)
         filtered.append(gr)
 
-    # ── Bước 3: Lấy giá (ưu tiên snippet, còn lại crawl song song) ──
+    # -- Step 3: Extract prices --
     price_results: list[dict] = []
     to_visit: list[dict] = []
 
     for gr in filtered:
-        # Kiểm tra relevance từ title/snippet
         score = max(_score(gr.get("title", ""), model_kws, brand),
                     _score(gr.get("snippet", ""), model_kws, brand))
 
+        # Try snippet price first (instant)
         snippet = gr.get("snippet", "") or ""
         snippet_price = _parse_vn_price(snippet)
         if snippet_price >= MIN_LAPTOP_PRICE:
-            print(f"[PriceCheck] Snippet price from {gr['domain']}: {snippet_price:,.0f}")
+            print(f"  [Snippet] {gr['domain']}: {snippet_price:,.0f}")
             price_results.append({
                 "site_name": _get_site_name(gr["domain"]),
                 "domain": gr["domain"],
@@ -488,25 +489,27 @@ def fetch_all_competitor_prices(keyword: str, brand: str = "",
         if len(price_results) >= limit:
             break
 
+    # -- Round 1: requests + BS4 (fast, parallel ~1-3s total) --
     if len(price_results) < limit and to_visit:
-        # Chạy song song 3-5 browser để tăng tốc
         remaining = limit - len(price_results)
-        candidates = to_visit[: max(remaining * 2, remaining)]
-        max_workers = min(5, max(3, remaining), len(candidates))
+        candidates = to_visit[:remaining + 3]
 
-        futures = {}
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            for gr in candidates:
-                futures[ex.submit(_extract_price_from_page_isolated, gr["url"])] = gr
+        print(f"  [Round1] requests+BS4 for {len(candidates)} pages...")
+        t1 = time.time()
 
-            for fut in as_completed(futures):
-                gr = futures[fut]
+        selenium_fallback: list[dict] = []
+
+        with ThreadPoolExecutor(max_workers=min(8, len(candidates))) as ex:
+            future_map = {ex.submit(_extract_price_requests, gr["url"]): gr for gr in candidates}
+            for fut in as_completed(future_map):
+                gr = future_map[fut]
                 try:
                     page_price = fut.result()
                 except Exception:
-                    continue
+                    page_price = 0.0
 
                 if page_price >= MIN_LAPTOP_PRICE:
+                    print(f"  [Fast] {gr['domain']}: {page_price:,.0f}")
                     price_results.append({
                         "site_name": _get_site_name(gr["domain"]),
                         "domain": gr["domain"],
@@ -516,14 +519,52 @@ def fetch_all_competitor_prices(keyword: str, brand: str = "",
                         "url": gr.get("url", ""),
                         "match_score": gr.get("match_score", 0.0),
                     })
+                else:
+                    selenium_fallback.append(gr)
 
-                if len(price_results) >= limit:
-                    break
+        print(f"  [Round1] Done in {time.time() - t1:.1f}s, got {len(price_results)} prices")
 
-    # Sắp xếp theo match_score giảm dần
+        # -- Round 2: Selenium fallback (only for failed pages) --
+        if len(price_results) < limit and selenium_fallback:
+            remaining = limit - len(price_results)
+            sel_candidates = selenium_fallback[:remaining + 1]
+
+            print(f"  [Round2] Selenium fallback for {len(sel_candidates)} pages...")
+            t2 = time.time()
+
+            max_workers = min(3, len(sel_candidates))
+            with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                future_map = {
+                    ex.submit(_extract_price_selenium_isolated, gr["url"]): gr
+                    for gr in sel_candidates
+                }
+                for fut in as_completed(future_map):
+                    gr = future_map[fut]
+                    try:
+                        page_price = fut.result()
+                    except Exception:
+                        continue
+
+                    if page_price >= MIN_LAPTOP_PRICE:
+                        print(f"  [Selenium] {gr['domain']}: {page_price:,.0f}")
+                        price_results.append({
+                            "site_name": _get_site_name(gr["domain"]),
+                            "domain": gr["domain"],
+                            "favicon_url": _get_favicon_url(gr["domain"]),
+                            "product_title": gr.get("title", ""),
+                            "price": page_price,
+                            "url": gr.get("url", ""),
+                            "match_score": gr.get("match_score", 0.0),
+                        })
+
+                    if len(price_results) >= limit:
+                        break
+
+            print(f"  [Round2] Done in {time.time() - t2:.1f}s")
+
     price_results.sort(key=lambda x: x["match_score"], reverse=True)
 
-    # ── Stats ─────────────────────────────────────────────
+    # -- Stats --
     all_prices = [r["price"] for r in price_results]
     stats = {
         "min_price": min(all_prices) if all_prices else None,
@@ -532,13 +573,14 @@ def fetch_all_competitor_prices(keyword: str, brand: str = "",
         "total_results": len(price_results),
     }
 
+    elapsed = time.time() - t_start
     if stats["avg_price"]:
         sites = ", ".join(set(r["site_name"] for r in price_results))
-        print(f"[PriceCheck] OK: {len(price_results)} gia tu {sites}")
+        print(f"[PriceCheck] OK: {len(price_results)} prices from {sites} ({elapsed:.1f}s)")
         print(f"[PriceCheck] Min: {stats['min_price']:,.0f} | "
               f"Avg: {stats['avg_price']:,.0f} | Max: {stats['max_price']:,.0f}")
     else:
-        print(f"[PriceCheck] Khong tim thay gia")
+        print(f"[PriceCheck] No prices found ({elapsed:.1f}s)")
 
     return {
         "keyword": keyword,
@@ -549,7 +591,7 @@ def fetch_all_competitor_prices(keyword: str, brand: str = "",
 
 
 def cleanup_driver():
-    """Đóng Selenium driver."""
+    """Dong Selenium driver cua thread hien tai."""
     driver = getattr(_thread_local, "driver", None)
     if driver:
         try:

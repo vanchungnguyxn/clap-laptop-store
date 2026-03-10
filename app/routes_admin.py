@@ -385,36 +385,39 @@ def price_history():
 #  CÀI ĐẶT
 # ═══════════════════════════════════════════════════════════
 
-@admin_bp.route("/settings", methods=["GET", "POST"])
+@admin_bp.route("/settings")
 @login_required
 def settings():
-    if request.method == "POST":
-        rule_id = request.form.get("rule_id", type=int)
-        inventory_threshold = request.form.get("inventory_threshold", type=int)
-        discount_percent = request.form.get("discount_percent", type=float)
-        competitor_out_markup = request.form.get("competitor_out_markup", type=float)
-        high_demand_markup = request.form.get("high_demand_markup", type=float)
-
-        if all(v is not None for v in [rule_id, inventory_threshold,
-                                        discount_percent, competitor_out_markup,
-                                        high_demand_markup]):
-            success = update_business_rule(
-                rule_id=rule_id,
-                inventory_threshold=inventory_threshold,
-                discount_percent=discount_percent,
-                competitor_out_markup=competitor_out_markup,
-                high_demand_markup=high_demand_markup,
-            )
-            if success:
-                _log("update_settings", "Cập nhật quy tắc kinh doanh")
-            flash("Cập nhật quy tắc thành công!" if success
-                  else "Lỗi khi cập nhật.", "success" if success else "error")
-        else:
-            flash("Vui lòng điền đầy đủ.", "warning")
-        return redirect(url_for("admin.settings"))
-
     rules = get_active_rules()
     return render_template("admin/settings.html", rules=rules)
+
+
+@admin_bp.route("/api/settings", methods=["POST"])
+@login_required
+def api_update_settings():
+    """API: Cập nhật quy tắc kinh doanh (AJAX, realtime)."""
+    data = request.get_json(silent=True) or {}
+    rule_id = data.get("rule_id")
+    inventory_threshold = data.get("inventory_threshold")
+    discount_percent = data.get("discount_percent")
+    competitor_out_markup = data.get("competitor_out_markup")
+    high_demand_markup = data.get("high_demand_markup")
+
+    if not all(v is not None for v in [rule_id, inventory_threshold,
+                                        discount_percent, competitor_out_markup,
+                                        high_demand_markup]):
+        return jsonify({"success": False, "error": "Thiếu dữ liệu"}), 400
+
+    success = update_business_rule(
+        rule_id=int(rule_id),
+        inventory_threshold=int(inventory_threshold),
+        discount_percent=float(discount_percent),
+        competitor_out_markup=float(competitor_out_markup),
+        high_demand_markup=float(high_demand_markup),
+    )
+    if success:
+        _log("update_settings", "Cập nhật quy tắc kinh doanh")
+    return jsonify({"success": success})
 
 
 # ═══════════════════════════════════════════════════════════

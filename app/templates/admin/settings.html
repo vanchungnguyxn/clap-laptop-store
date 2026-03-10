@@ -2,68 +2,320 @@
 {% block title %}Cài đặt{% endblock %}
 
 {% block content %}
-<h4 class="mb-4"><i class="bi bi-gear me-2"></i>Cài đặt quy tắc kinh doanh</h4>
+{% set rule = rules[0] if rules else None %}
 
-<div class="row">
-{% for rule in rules %}
-<div class="col-lg-7">
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-0">
-            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>{{ rule.rule_name }}
-                {% if rule.is_active %}<span class="badge bg-success ms-2">Hoạt động</span>{% endif %}</h5>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h4 class="mb-0"><i class="bi bi-gear-wide-connected me-2"></i>Cài đặt quy tắc kinh doanh</h4>
+    <span id="saveIndicator" class="badge bg-success bg-opacity-10 text-success px-3 py-2" style="display:none;">
+        <i class="bi bi-check-circle me-1"></i>Đã lưu
+    </span>
+</div>
+
+{% if not rule %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle me-2"></i>Chưa có quy tắc kinh doanh nào. Hãy kiểm tra lại database.
+</div>
+{% else %}
+
+<div class="row g-4">
+    <!-- LEFT: Controls -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders2 me-2 text-primary"></i>{{ rule.rule_name }}
+                </h5>
+                <span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>Đang hoạt động</span>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <input type="hidden" id="ruleId" value="{{ rule.id }}">
+
+                <!-- Ngưỡng tồn kho -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">
+                            <i class="bi bi-box-seam me-1 text-primary"></i>Ngưỡng tồn kho
+                        </label>
+                        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 fs-6" id="valThreshold">{{ rule.inventory_threshold }}</span>
+                    </div>
+                    <input type="range" class="form-range" id="sliderThreshold"
+                           min="10" max="500" step="5" value="{{ rule.inventory_threshold }}"
+                           oninput="onSliderChange()">
+                    <div class="d-flex justify-content-between text-muted" style="font-size:.75rem;">
+                        <span>10</span><span>100</span><span>250</span><span>500 sản phẩm</span>
+                    </div>
+                    <div class="form-text mt-1">Tồn kho vượt ngưỡng này &rarr; Inventory Agent yêu cầu giảm giá.</div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Giảm giá tồn kho cao -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">
+                            <i class="bi bi-arrow-down-circle me-1 text-danger"></i>Giảm giá khi tồn kho cao
+                        </label>
+                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 fs-6" id="valDiscount">{{ rule.discount_percent }}%</span>
+                    </div>
+                    <input type="range" class="form-range slider-danger" id="sliderDiscount"
+                           min="0" max="30" step="0.5" value="{{ rule.discount_percent }}"
+                           oninput="onSliderChange()">
+                    <div class="d-flex justify-content-between text-muted" style="font-size:.75rem;">
+                        <span>0%</span><span>10%</span><span>20%</span><span>30%</span>
+                    </div>
+                </div>
+
+                <!-- Tăng giá đối thủ hết hàng -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">
+                            <i class="bi bi-arrow-up-circle me-1 text-success"></i>Tăng giá khi đối thủ hết hàng
+                        </label>
+                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 fs-6" id="valCompetitor">{{ rule.competitor_out_markup }}%</span>
+                    </div>
+                    <input type="range" class="form-range slider-success" id="sliderCompetitor"
+                           min="0" max="30" step="0.5" value="{{ rule.competitor_out_markup }}"
+                           oninput="onSliderChange()">
+                    <div class="d-flex justify-content-between text-muted" style="font-size:.75rem;">
+                        <span>0%</span><span>10%</span><span>20%</span><span>30%</span>
+                    </div>
+                </div>
+
+                <!-- Tăng giá nhu cầu cao -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">
+                            <i class="bi bi-graph-up-arrow me-1 text-info"></i>Tăng giá khi nhu cầu cao
+                        </label>
+                        <span class="badge bg-info bg-opacity-10 text-info px-3 py-2 fs-6" id="valDemand">{{ rule.high_demand_markup }}%</span>
+                    </div>
+                    <input type="range" class="form-range slider-info" id="sliderDemand"
+                           min="0" max="30" step="0.5" value="{{ rule.high_demand_markup }}"
+                           oninput="onSliderChange()">
+                    <div class="d-flex justify-content-between text-muted" style="font-size:.75rem;">
+                        <span>0%</span><span>10%</span><span>20%</span><span>30%</span>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary px-4" id="btnSave" onclick="saveSettings()">
+                        <i class="bi bi-check-circle me-1"></i>Lưu thay đổi
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="resetDefaults()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Mặc định
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="POST">
-                <input type="hidden" name="rule_id" value="{{ rule.id }}">
-                <div class="mb-4">
-                    <label class="form-label fw-bold"><i class="bi bi-box-seam me-1 text-primary"></i>Ngưỡng tồn kho</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" name="inventory_threshold" value="{{ rule.inventory_threshold }}" min="1" required>
-                        <span class="input-group-text">sản phẩm</span>
-                    </div>
-                    <div class="form-text">Tồn kho vượt ngưỡng → Inventory Agent yêu cầu giảm giá.</div>
+    </div>
+
+    <!-- RIGHT: Live Preview -->
+    <div class="col-lg-5">
+        <!-- Live Simulation -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h6 class="mb-0"><i class="bi bi-lightning-charge me-2 text-warning"></i>Mô phỏng trực tiếp</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Giá gốc sản phẩm (VNĐ)</label>
+                    <input type="number" class="form-control" id="simBasePrice" value="20000000"
+                           oninput="updateSimulation()" min="1000000" step="500000">
                 </div>
-                <div class="mb-4">
-                    <label class="form-label fw-bold"><i class="bi bi-arrow-down-circle me-1 text-danger"></i>% Giảm giá khi tồn kho cao</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" name="discount_percent" value="{{ rule.discount_percent }}" min="0" max="50" step="0.5" required>
-                        <span class="input-group-text">%</span>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Tồn kho hiện tại</label>
+                    <input type="number" class="form-control" id="simStock" value="150"
+                           oninput="updateSimulation()" min="0">
+                </div>
+
+                <div class="border rounded p-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Tình huống:</span>
+                        <span class="badge" id="simScenarioBadge">—</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small">Giá gốc:</span>
+                        <span class="fw-bold" id="simOriginal">—</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small">Điều chỉnh:</span>
+                        <span class="fw-bold" id="simAdjustment">—</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Giá mới:</span>
+                        <span class="fw-bold fs-5" id="simNewPrice" style="color:#e53e3e;">—</span>
                     </div>
                 </div>
-                <div class="mb-4">
-                    <label class="form-label fw-bold"><i class="bi bi-arrow-up-circle me-1 text-success"></i>% Tăng giá khi đối thủ hết hàng</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" name="competitor_out_markup" value="{{ rule.competitor_out_markup }}" min="0" max="50" step="0.5" required>
-                        <span class="input-group-text">%</span>
+            </div>
+        </div>
+
+        <!-- Rules Explanation -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h6 class="mb-0"><i class="bi bi-diagram-3 me-2 text-primary"></i>Logic hoạt động</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:40px;height:40px;background:linear-gradient(135deg,#fee2e2,#fecaca);">
+                        <i class="bi bi-arrow-down-circle-fill text-danger"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">Tồn kho cao</div>
+                        <div class="text-muted" style="font-size:.82rem;">
+                            Tồn kho &gt; <strong id="prevThreshold">{{ rule.inventory_threshold }}</strong>
+                            &rarr; giảm <strong id="prevDiscount">{{ rule.discount_percent }}%</strong>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-4">
-                    <label class="form-label fw-bold"><i class="bi bi-graph-up-arrow me-1 text-info"></i>% Tăng giá khi nhu cầu cao</label>
-                    <div class="input-group">
-                        <input type="number" class="form-control" name="high_demand_markup" value="{{ rule.high_demand_markup }}" min="0" max="50" step="0.5" required>
-                        <span class="input-group-text">%</span>
+                <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:40px;height:40px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);">
+                        <i class="bi bi-arrow-up-circle-fill text-success"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">Đối thủ hết hàng</div>
+                        <div class="text-muted" style="font-size:.82rem;">
+                            Tất cả đối thủ hết &rarr; tăng <strong id="prevCompetitor">{{ rule.competitor_out_markup }}%</strong>
+                        </div>
                     </div>
                 </div>
-                <hr>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Lưu</button>
-                <button type="reset" class="btn btn-outline-secondary ms-2">Hoàn tác</button>
-            </form>
+                <div class="p-3 d-flex align-items-start gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:40px;height:40px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+                        <i class="bi bi-graph-up-arrow text-info"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold small">Nhu cầu đỉnh</div>
+                        <div class="text-muted" style="font-size:.82rem;">
+                            Nhu cầu cao &rarr; tăng <strong id="prevDemand">{{ rule.high_demand_markup }}%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-<div class="col-lg-5">
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white border-0"><h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Logic hoạt động</h6></div>
-        <div class="card-body">
-            <div class="mb-3 p-3 bg-light rounded"><h6 class="text-danger"><i class="bi bi-1-circle-fill me-1"></i>Tồn kho cao</h6>
-                <small>Tồn kho &gt; <strong>{{ rule.inventory_threshold }}</strong> → giảm <strong>{{ rule.discount_percent }}%</strong></small></div>
-            <div class="mb-3 p-3 bg-light rounded"><h6 class="text-success"><i class="bi bi-2-circle-fill me-1"></i>Đối thủ hết hàng</h6>
-                <small>Tất cả đối thủ hết → tăng <strong>{{ rule.competitor_out_markup }}%</strong></small></div>
-            <div class="mb-3 p-3 bg-light rounded"><h6 class="text-info"><i class="bi bi-3-circle-fill me-1"></i>Nhu cầu đỉnh</h6>
-                <small>Nhu cầu cao → tăng <strong>{{ rule.high_demand_markup }}%</strong></small></div>
-        </div>
-    </div>
-</div>
-{% endfor %}
-</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const fmt = v => new Intl.NumberFormat('vi-VN').format(Math.round(v)) + '₫';
+
+function readSliders() {
+    return {
+        threshold:  parseFloat(document.getElementById('sliderThreshold').value),
+        discount:   parseFloat(document.getElementById('sliderDiscount').value),
+        competitor: parseFloat(document.getElementById('sliderCompetitor').value),
+        demand:     parseFloat(document.getElementById('sliderDemand').value),
+    };
+}
+
+function onSliderChange() {
+    const s = readSliders();
+    document.getElementById('valThreshold').textContent  = s.threshold;
+    document.getElementById('valDiscount').textContent    = s.discount + '%';
+    document.getElementById('valCompetitor').textContent  = s.competitor + '%';
+    document.getElementById('valDemand').textContent      = s.demand + '%';
+
+    document.getElementById('prevThreshold').textContent  = s.threshold;
+    document.getElementById('prevDiscount').textContent   = s.discount + '%';
+    document.getElementById('prevCompetitor').textContent = s.competitor + '%';
+    document.getElementById('prevDemand').textContent     = s.demand + '%';
+
+    updateSimulation();
+}
+
+function updateSimulation() {
+    const s         = readSliders();
+    const basePrice = parseFloat(document.getElementById('simBasePrice').value) || 0;
+    const stock     = parseInt(document.getElementById('simStock').value) || 0;
+
+    let scenario, adjustment, badgeClass;
+    if (stock > s.threshold) {
+        scenario   = 'Tồn kho cao';
+        adjustment = -s.discount;
+        badgeClass = 'bg-danger';
+    } else {
+        scenario   = 'Bình thường';
+        adjustment = 0;
+        badgeClass = 'bg-secondary';
+    }
+
+    const newPrice = basePrice * (1 + adjustment / 100);
+
+    const scenarioBadge = document.getElementById('simScenarioBadge');
+    scenarioBadge.textContent = scenario;
+    scenarioBadge.className   = 'badge ' + badgeClass;
+
+    document.getElementById('simOriginal').textContent   = fmt(basePrice);
+    document.getElementById('simAdjustment').textContent  = (adjustment >= 0 ? '+' : '') + adjustment + '%';
+    document.getElementById('simAdjustment').style.color  = adjustment < 0 ? '#e53e3e' : adjustment > 0 ? '#38a169' : '#718096';
+    document.getElementById('simNewPrice').textContent    = fmt(newPrice);
+}
+
+let _saveTimeout = null;
+function saveSettings() {
+    const btn = document.getElementById('btnSave');
+    const s   = readSliders();
+    btn.disabled  = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lưu...';
+
+    fetch('{{ url_for("admin.api_update_settings") }}', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            rule_id:              document.getElementById('ruleId').value,
+            inventory_threshold:  s.threshold,
+            discount_percent:     s.discount,
+            competitor_out_markup: s.competitor,
+            high_demand_markup:   s.demand,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Lưu thay đổi';
+        if (data.success) {
+            const ind = document.getElementById('saveIndicator');
+            ind.style.display = 'inline-block';
+            clearTimeout(_saveTimeout);
+            _saveTimeout = setTimeout(() => ind.style.display = 'none', 3000);
+        } else {
+            alert('Lỗi: ' + (data.error || 'Không thể lưu'));
+        }
+    })
+    .catch(() => {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Lưu thay đổi';
+        alert('Lỗi kết nối server');
+    });
+}
+
+function resetDefaults() {
+    document.getElementById('sliderThreshold').value  = 100;
+    document.getElementById('sliderDiscount').value    = 5;
+    document.getElementById('sliderCompetitor').value  = 10;
+    document.getElementById('sliderDemand').value       = 8;
+    onSliderChange();
+}
+
+onSliderChange();
+</script>
+
+<style>
+.form-range::-webkit-slider-thumb { width: 20px; height: 20px; }
+.form-range::-moz-range-thumb { width: 20px; height: 20px; }
+.slider-danger::-webkit-slider-thumb  { background: #dc3545; }
+.slider-danger::-moz-range-thumb      { background: #dc3545; }
+.slider-success::-webkit-slider-thumb { background: #198754; }
+.slider-success::-moz-range-thumb     { background: #198754; }
+.slider-info::-webkit-slider-thumb    { background: #0dcaf0; }
+.slider-info::-moz-range-thumb        { background: #0dcaf0; }
+.form-range:focus::-webkit-slider-thumb { box-shadow: 0 0 0 .25rem rgba(13,110,253,.25); }
+</style>
 {% endblock %}

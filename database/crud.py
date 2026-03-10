@@ -88,7 +88,7 @@ def update_product_price(product_id: int, new_price: float, reason: str,
         return True
     except Error as e:
         conn.rollback()
-        print(f"❌ Lỗi cập nhật giá: {e}")
+        print(f"[Error] Lỗi cập nhật giá: {e}")
         return False
     finally:
         cursor.close()
@@ -127,7 +127,7 @@ def update_stock_quantity(product_id: int, new_quantity: int,
         return True
     except Error as e:
         conn.rollback()
-        print(f"❌ Lỗi cập nhật tồn kho: {e}")
+        print(f"[Error] Lỗi cập nhật tồn kho: {e}")
         return False
     finally:
         cursor.close()
@@ -158,7 +158,7 @@ def save_competitor_price(product_id: int, competitor_id: int,
         return True
     except Error as e:
         conn.rollback()
-        print(f"❌ Lỗi lưu giá đối thủ: {e}")
+        print(f"[Error] Lỗi lưu giá đối thủ: {e}")
         return False
     finally:
         cursor.close()
@@ -287,7 +287,7 @@ def update_business_rule(rule_id: int, inventory_threshold: int,
         return True
     except Error as e:
         conn.rollback()
-        print(f"❌ Lỗi cập nhật quy tắc: {e}")
+        print(f"[Error] Lỗi cập nhật quy tắc: {e}")
         return False
     finally:
         cursor.close()

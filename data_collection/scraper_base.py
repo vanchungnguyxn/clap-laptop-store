@@ -71,7 +71,8 @@ class BaseScraper(ABC):
         }
         options.add_experimental_option("prefs", prefs)
 
-        service = Service(ChromeDriverManager().install())
+        from data_collection.quick_price_check import _get_chromedriver_path
+        service = Service(_get_chromedriver_path())
         driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(self.PAGE_LOAD_TIMEOUT)
 

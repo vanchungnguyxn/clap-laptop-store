@@ -95,9 +95,10 @@ def _new_driver():
     prefs = {"profile.managed_default_content_settings.images": 2}
     opts.add_experimental_option("prefs", prefs)
 
-    service = Service(ChromeDriverManager().install())
+    from data_collection.quick_price_check import _get_chromedriver_path
+    service = Service(_get_chromedriver_path())
     driver = webdriver.Chrome(service=service, options=opts)
-    driver.set_page_load_timeout(15)
+    driver.set_page_load_timeout(12)
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
     })
