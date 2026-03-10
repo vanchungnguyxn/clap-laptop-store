@@ -1,5 +1,5 @@
 # ============================================
-# Multi-Agent Laptop Store Management System
+# CLap – Laptop Store Management System
 # ============================================
 
 # Web Framework
@@ -11,14 +11,7 @@ mysql-connector-python==9.1.0
 SQLAlchemy==2.0.36
 PyMySQL==1.1.1
 
-# Multi-Agent Framework
-crewai==0.86.0
-crewai-tools==0.14.0
-langchain==0.3.12
-langchain-openai==0.2.12
-langchain-community==0.3.12
-
-# Web Scraping
+# Web Scraping (optional on Railway – no Chrome available)
 selenium==4.27.1
 webdriver-manager==4.0.2
 beautifulsoup4==4.12.3
