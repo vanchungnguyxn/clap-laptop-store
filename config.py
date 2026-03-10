@@ -13,7 +13,17 @@ load_dotenv()
 
 def _parse_mysql_url() -> dict:
     """Parse MYSQL_URL (Railway cung cấp) thành các thành phần riêng lẻ."""
-    url = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL") or ""
+    url = (
+        os.getenv("MYSQL_URL")
+        or os.getenv("MYSQL_PRIVATE_URL")
+        or os.getenv("MYSQL_PUBLIC_URL")
+        or os.getenv("DATABASE_URL")
+        or ""
+    )
+    if url:
+        print(f"[config] Found DB URL (length={len(url)}, scheme={url.split('://')[0] if '://' in url else '?'})")
+    else:
+        print("[config] No MYSQL_URL / DATABASE_URL found – falling back to individual env vars")
     if not url:
         return {}
     try:
@@ -47,6 +57,8 @@ class Config:
     DB_USER = _db.get("user") or os.getenv("MYSQLUSER", os.getenv("DB_USER", "laptop_shop"))
     DB_PASSWORD = _db.get("password") or os.getenv("MYSQLPASSWORD", os.getenv("DB_PASSWORD", "shop123"))
     DB_NAME = _db.get("database") or os.getenv("MYSQLDATABASE", os.getenv("DB_NAME", "laptop_pricing"))
+
+    print(f"[config] DB → {DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
     SQLALCHEMY_DATABASE_URI = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
