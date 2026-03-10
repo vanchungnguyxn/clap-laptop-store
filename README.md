@@ -13,7 +13,6 @@
   <img src="https://img.shields.io/badge/Flask-3.1-black?logo=flask" alt="Flask">
   <img src="https://img.shields.io/badge/MySQL-8.0+-4479A1?logo=mysql&logoColor=white" alt="MySQL">
   <img src="https://img.shields.io/badge/Selenium-4.27-43B02A?logo=selenium&logoColor=white" alt="Selenium">
-  <img src="https://img.shields.io/badge/Deploy-Railway-0B0D0E?logo=railway" alt="Railway">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
 
@@ -295,19 +294,6 @@ python main.py
 > - Password: `admin123`
 > - Mã nhân viên: `NV001`
 
-### Production (Railway)
-
-Dự án đã cấu hình sẵn cho Railway:
-
-```bash
-# Push lên GitHub
-git add .
-git commit -m "Deploy to Railway"
-git push origin main
-```
-
-Xem chi tiết tại phần [Deploy lên Railway](#deploy-lên-railway).
-
 ---
 
 ## Cấu hình Environment
@@ -327,8 +313,6 @@ Tạo file `.env` từ `.env.example`:
 | `OPENAI_MODEL` | `gpt-4o-mini` | Model OpenAI sử dụng |
 | `SCRAPE_INTERVAL_MINUTES` | `60` | Chu kỳ scraping tự động (phút) |
 | `HEADLESS_BROWSER` | `True` | Chạy Chrome ẩn khi scraping |
-
-**Railway**: Khi deploy lên Railway, hệ thống tự động đọc `MYSQL_URL` hoặc các biến `MYSQLHOST`, `MYSQLPORT`... do Railway cung cấp. Không cần cấu hình DB thủ công.
 
 ---
 
@@ -381,10 +365,7 @@ clap-laptop-store/
 │   └── migrate_product_details.py  # Migration: cột chi tiết sản phẩm
 │
 ├── config.py                       # Cấu hình tập trung
-├── main.py                         # Entry point (development)
-├── wsgi.py                         # Entry point (production/Gunicorn)
-├── Procfile                        # Railway/Heroku process file
-├── runtime.txt                     # Python version cho Railway
+├── main.py                         # Entry point
 ├── requirements.txt                # Python dependencies
 ├── .env.example                    # Template environment variables
 └── .gitignore
@@ -441,45 +422,6 @@ curl -X POST http://localhost:5000/admin/api/ai-suggest-price \
   "competitors": [...]
 }
 ```
-
----
-
-## Deploy lên Railway
-
-### Bước 1: Push code lên GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/clap-laptop-store.git
-git push -u origin main
-```
-
-### Bước 2: Tạo project trên Railway
-
-1. Truy cập [railway.app](https://railway.app/) → **Login with GitHub**
-2. **New Project** → **Deploy from GitHub repo** → chọn repository
-3. Railway tự nhận diện `Procfile` và build
-
-### Bước 3: Thêm MySQL
-
-1. Trong project → **"+ New"** → **"Database"** → **"MySQL"**
-2. Railway tự tạo biến `MYSQL_URL` và inject vào app
-
-### Bước 4: Cấu hình biến môi trường
-
-| Biến | Giá trị |
-|------|---------|
-| `SECRET_KEY` | Chuỗi ngẫu nhiên (VD: `openssl rand -hex 32`) |
-| `FLASK_DEBUG` | `False` |
-| `OPENAI_API_KEY` | API key OpenAI *(tuỳ chọn)* |
-
-### Bước 5: Tạo domain
-
-**Settings** → **Networking** → **Generate Domain** → nhận URL dạng `*.up.railway.app`
-
-> **Lưu ý:** Selenium/Chrome không khả dụng trên Railway. Tính năng AI scraping chỉ hoạt động ở local.
 
 ---
 
@@ -562,7 +504,7 @@ copies or substantial portions of the Software.
 - [x] AI gợi ý giá real-time
 - [x] AI tự điền thông số kỹ thuật
 - [x] Nhật ký hoạt động admin
-- [x] Deploy sẵn cho Railway
+- [x] Chạy local hoàn chỉnh
 
 ### v1.1 – Dự kiến
 

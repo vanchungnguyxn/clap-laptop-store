@@ -76,7 +76,7 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.start()
-    print(f"⏰ Scheduler đã khởi động – Chu kỳ: {Config.SCRAPE_INTERVAL_MINUTES} phút")
+    print(f"[Scheduler] Da khoi dong – Chu ky: {Config.SCRAPE_INTERVAL_MINUTES} phut")
 
 
 def stop_scheduler():

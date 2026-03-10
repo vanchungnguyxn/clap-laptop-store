@@ -1,6 +1,5 @@
 """
 Quản lý kết nối MySQL và khởi tạo database.
-Hỗ trợ cả local development và Railway (MYSQL_URL).
 """
 
 import os
@@ -44,43 +43,36 @@ def get_connection_without_db():
 
 
 def init_db():
-    """
-    Khởi tạo database: tạo DB nếu chưa có, chạy schema.sql.
-    Trên Railway, DB đã tồn tại sẵn → chỉ tạo tables.
-    """
+    """Khởi tạo database: tạo DB nếu chưa có, sau đó chạy schema.sql."""
     schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
 
     with open(schema_path, "r", encoding="utf-8") as f:
         schema_sql = f.read()
 
-    # Local dev: tạo DB nếu chưa có
+    # Tạo database nếu chưa tồn tại
+    conn = get_connection_without_db()
+    cursor = conn.cursor()
     try:
-        tmp = get_connection_without_db()
-        cur = tmp.cursor()
-        try:
-            cur.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{Config.DB_NAME}` "
-                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            )
-            tmp.commit()
-        except mysql.connector.Error as e:
-            if e.errno in (1007, 1044):
-                pass
-            else:
-                print(f"[DB] Create DB note: {e}")
-        finally:
-            cur.close()
-            tmp.close()
-    except Exception as e:
-        print(f"[DB] Pre-create DB skip: {e}")
+        cursor.execute(
+            f"CREATE DATABASE IF NOT EXISTS `{Config.DB_NAME}` "
+            "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
+        conn.commit()
+    except mysql.connector.Error as e:
+        if e.errno == 1007:  # DB already exists
+            pass
+        else:
+            print(f"[DB] Create DB note: {e}")
+    finally:
+        cursor.close()
+        conn.close()
 
-    # Kết nối tới đúng database (railway / laptop_pricing)
+    # Kết nối tới database và chạy schema
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
         for statement in schema_sql.split(";"):
-            # Strip comment-only lines, keep SQL
             lines = [
                 ln for ln in statement.splitlines()
                 if ln.strip() and not ln.strip().startswith("--")
@@ -91,8 +83,8 @@ def init_db():
             try:
                 cursor.execute(cleaned)
             except mysql.connector.Error as e:
-                # 1050=table exists, 1007=db exists, 1062=duplicate entry, 1044=access denied
-                if e.errno in (1050, 1007, 1062, 1044):
+                # 1050=table exists, 1007=db exists, 1062=duplicate entry
+                if e.errno in (1050, 1007, 1062):
                     pass
                 else:
                     print(f"[DB] SQL Warning: {e}")
