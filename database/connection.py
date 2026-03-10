@@ -80,11 +80,16 @@ def init_db():
 
     try:
         for statement in schema_sql.split(";"):
-            statement = statement.strip()
-            if not statement or statement.startswith("--"):
+            # Strip comment-only lines, keep SQL
+            lines = [
+                ln for ln in statement.splitlines()
+                if ln.strip() and not ln.strip().startswith("--")
+            ]
+            cleaned = "\n".join(lines).strip()
+            if not cleaned:
                 continue
             try:
-                cursor.execute(statement)
+                cursor.execute(cleaned)
             except mysql.connector.Error as e:
                 # 1050=table exists, 1007=db exists, 1062=duplicate entry, 1044=access denied
                 if e.errno in (1050, 1007, 1062, 1044):
